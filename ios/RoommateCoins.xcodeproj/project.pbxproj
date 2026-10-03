@@ -1,0 +1,636 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		151F4C7CB47D25AD79344D97 /* ConfirmComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */; };
+		16BB389118E6DD4BBFA4531F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0901B884E242C2DC7D38414 /* Models.swift */; };
+		2CCAC1CF401DA3AB839C83E9 /* NeoPop in Frameworks */ = {isa = PBXBuildFile; productRef = 555F91191D0EA63A399E8641 /* NeoPop */; };
+		3025E10414C941C0093FF34D /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 472A66A13339B85F09997C49 /* OfflineQueue.swift */; };
+		5607CBB612656F3E259218BC /* InviteViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24A3A66DDDD0793EE1EB083F /* InviteViews.swift */; };
+		67DCEB7525DF8E7B4D7922C1 /* DebugAutomation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */; };
+		6C02D9D502FAD945A3798192 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A328EA2717E13E84605A1D0 /* AppState.swift */; };
+		755ADCB8676F30C324ACA7B0 /* Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B05DD6395D490E9BA03F4A3 /* Format.swift */; };
+		7CD0DA0126089C6A43BFA487 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA61B4BEFA5DF20F2ED379F7 /* AuthViews.swift */; };
+		9396CB8D9BBD599D6FAE6AB6 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */; };
+		AAE1319F93E6A7797AEC6E2B /* NeoPopComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9BEA1B055C97276EFB5DB6C /* NeoPopComponents.swift */; };
+		B75EF7CE0FCB8E4F97D5771E /* SettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D96BDE36DEE1D8D6CFF66C /* SettingsViews.swift */; };
+		BB5DE30D78AE9F514476B76C /* RoommateCoinsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368B6F4BFF16C2965171304E /* RoommateCoinsApp.swift */; };
+		C359DE9846AA74CCC6FC4821 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CAA2516D330C18995A8989 /* APIClient.swift */; };
+		CE74FEC8A2760069D6BA2DBD /* CelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A209665E775B81F8DF8B72C /* CelebrationView.swift */; };
+		D448B38A8E5E16B5BE742A74 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21B65D79262DC1F5FC05480 /* Strings.swift */; };
+		D7C38A8A3C50C2CDBB520859 /* WalletView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049AE0A3017E464DFD0D6F5 /* WalletView.swift */; };
+		D91A8869C6C4A566D68C5FC9 /* GroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C407FEF1409959159EDB735F /* GroupView.swift */; };
+		DE680522FCBB849010C247B4 /* ExpenseViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E3233562BA1DCDBD0B8246 /* ExpenseViews.swift */; };
+		E2C1DCA6CE4D47B1058CDC99 /* SettleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5915B49DCF56376FBDB0E237 /* SettleView.swift */; };
+		E38C164E7FA8CD11673247A9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B96E6AF0B4F8DCCB5CA40BD6 /* Theme.swift */; };
+		EF91B364A2B3914C7CC05CB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7E2FDC785AA6AFE3B25E1166 /* Assets.xcassets */; };
+		F02105D94BE3B21B49D7E16D /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3275C0EAE8C8318CCED68D48 /* HomeView.swift */; };
+		F8BD8F37FDC828508DC2E7CD /* FormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4D0B304B82F27E4875656F /* FormatTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		800F4D3CE4EC58E110C92013 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF944050CB21487CAA20A96E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 98692E044ADE5FBAD5C477A9;
+			remoteInfo = RoommateCoins;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmComponents.swift; sourceTree = "<group>"; };
+		1488A9FCE6A8ADF6AC730076 /* RoommateCoins.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RoommateCoins.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		24A3A66DDDD0793EE1EB083F /* InviteViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteViews.swift; sourceTree = "<group>"; };
+		3275C0EAE8C8318CCED68D48 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		368B6F4BFF16C2965171304E /* RoommateCoinsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoommateCoinsApp.swift; sourceTree = "<group>"; };
+		38E3233562BA1DCDBD0B8246 /* ExpenseViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseViews.swift; sourceTree = "<group>"; };
+		3B05DD6395D490E9BA03F4A3 /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
+		472A66A13339B85F09997C49 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
+		4879BDC034E74287B7A536AF /* RoommateCoinsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RoommateCoinsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5915B49DCF56376FBDB0E237 /* SettleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettleView.swift; sourceTree = "<group>"; };
+		68CAA2516D330C18995A8989 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		7A209665E775B81F8DF8B72C /* CelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationView.swift; sourceTree = "<group>"; };
+		7E2FDC785AA6AFE3B25E1166 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8A328EA2717E13E84605A1D0 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A027AA040FA7DCD89F605F7E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B0901B884E242C2DC7D38414 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		B21B65D79262DC1F5FC05480 /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
+		B3D96BDE36DEE1D8D6CFF66C /* SettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViews.swift; sourceTree = "<group>"; };
+		B96E6AF0B4F8DCCB5CA40BD6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		C407FEF1409959159EDB735F /* GroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupView.swift; sourceTree = "<group>"; };
+		D049AE0A3017E464DFD0D6F5 /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
+		D9BEA1B055C97276EFB5DB6C /* NeoPopComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeoPopComponents.swift; sourceTree = "<group>"; };
+		E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAutomation.swift; sourceTree = "<group>"; };
+		EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		ED4D0B304B82F27E4875656F /* FormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatTests.swift; sourceTree = "<group>"; };
+		FA61B4BEFA5DF20F2ED379F7 /* AuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViews.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		61CA07998FC9A2A5620E8B44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CCAC1CF401DA3AB839C83E9 /* NeoPop in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0481106390F0797C3B8CBD47 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				B3D96BDE36DEE1D8D6CFF66C /* SettingsViews.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		0D35C303FF5649D5035F54EC /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				3275C0EAE8C8318CCED68D48 /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		1E90287753273A8B1DE1D82D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1488A9FCE6A8ADF6AC730076 /* RoommateCoins.app */,
+				4879BDC034E74287B7A536AF /* RoommateCoinsTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		219C65CD16A76B33393A7821 /* Group */ = {
+			isa = PBXGroup;
+			children = (
+				C407FEF1409959159EDB735F /* GroupView.swift */,
+			);
+			path = Group;
+			sourceTree = "<group>";
+		};
+		25127EDF83991440585E82AB /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				D9BEA1B055C97276EFB5DB6C /* NeoPopComponents.swift */,
+				B96E6AF0B4F8DCCB5CA40BD6 /* Theme.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		399E98CCA554033DEDD8FC37 /* RoommateCoins */ = {
+			isa = PBXGroup;
+			children = (
+				5778999B1C9896BA57EF0763 /* App */,
+				DB33824D5319748718C8BCC8 /* Core */,
+				25127EDF83991440585E82AB /* DesignSystem */,
+				E616EADE6C771D8E96A0A36B /* Features */,
+				96FC2FC91E76A6505D3FED37 /* Resources */,
+			);
+			path = RoommateCoins;
+			sourceTree = "<group>";
+		};
+		486AACF4B53F4F8703C6BCFF /* Coins */ = {
+			isa = PBXGroup;
+			children = (
+				7A209665E775B81F8DF8B72C /* CelebrationView.swift */,
+				D049AE0A3017E464DFD0D6F5 /* WalletView.swift */,
+			);
+			path = Coins;
+			sourceTree = "<group>";
+		};
+		5778999B1C9896BA57EF0763 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				368B6F4BFF16C2965171304E /* RoommateCoinsApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		6D2B2AD80542051E39534BCA /* Expense */ = {
+			isa = PBXGroup;
+			children = (
+				073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */,
+				38E3233562BA1DCDBD0B8246 /* ExpenseViews.swift */,
+			);
+			path = Expense;
+			sourceTree = "<group>";
+		};
+		713D326395EBAF424010CBCE /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				FA61B4BEFA5DF20F2ED379F7 /* AuthViews.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		96FC2FC91E76A6505D3FED37 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7E2FDC785AA6AFE3B25E1166 /* Assets.xcassets */,
+				A027AA040FA7DCD89F605F7E /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A6A0EDA7BFBBDDD341EC78EE = {
+			isa = PBXGroup;
+			children = (
+				399E98CCA554033DEDD8FC37 /* RoommateCoins */,
+				D184B9958D2C8D7EAE877F50 /* RoommateCoinsTests */,
+				1E90287753273A8B1DE1D82D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BD1F72D5D74EE9591FED1C0D /* Settle */ = {
+			isa = PBXGroup;
+			children = (
+				5915B49DCF56376FBDB0E237 /* SettleView.swift */,
+			);
+			path = Settle;
+			sourceTree = "<group>";
+		};
+		C6DFAEBC7C6C14C6D7D99D14 /* Invite */ = {
+			isa = PBXGroup;
+			children = (
+				24A3A66DDDD0793EE1EB083F /* InviteViews.swift */,
+			);
+			path = Invite;
+			sourceTree = "<group>";
+		};
+		D184B9958D2C8D7EAE877F50 /* RoommateCoinsTests */ = {
+			isa = PBXGroup;
+			children = (
+				ED4D0B304B82F27E4875656F /* FormatTests.swift */,
+			);
+			path = RoommateCoinsTests;
+			sourceTree = "<group>";
+		};
+		DB33824D5319748718C8BCC8 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				68CAA2516D330C18995A8989 /* APIClient.swift */,
+				8A328EA2717E13E84605A1D0 /* AppState.swift */,
+				E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */,
+				3B05DD6395D490E9BA03F4A3 /* Format.swift */,
+				B0901B884E242C2DC7D38414 /* Models.swift */,
+				EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */,
+				472A66A13339B85F09997C49 /* OfflineQueue.swift */,
+				B21B65D79262DC1F5FC05480 /* Strings.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		E616EADE6C771D8E96A0A36B /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				713D326395EBAF424010CBCE /* Auth */,
+				486AACF4B53F4F8703C6BCFF /* Coins */,
+				6D2B2AD80542051E39534BCA /* Expense */,
+				219C65CD16A76B33393A7821 /* Group */,
+				0D35C303FF5649D5035F54EC /* Home */,
+				C6DFAEBC7C6C14C6D7D99D14 /* Invite */,
+				0481106390F0797C3B8CBD47 /* Settings */,
+				BD1F72D5D74EE9591FED1C0D /* Settle */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		601673F270A858230C432B7F /* RoommateCoinsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 786C8C57D98748835C2DD91A /* Build configuration list for PBXNativeTarget "RoommateCoinsTests" */;
+			buildPhases = (
+				1E4127283BCF63AD1F50F5AD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0C7995375CAC24DE5310DA0 /* PBXTargetDependency */,
+			);
+			name = RoommateCoinsTests;
+			packageProductDependencies = (
+			);
+			productName = RoommateCoinsTests;
+			productReference = 4879BDC034E74287B7A536AF /* RoommateCoinsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		98692E044ADE5FBAD5C477A9 /* RoommateCoins */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC3B5387B47A1EA7354433F3 /* Build configuration list for PBXNativeTarget "RoommateCoins" */;
+			buildPhases = (
+				0D3B9A86A6A7AEB8DAD2EBC8 /* Sources */,
+				7530DE1B6E73FFDB211C350A /* Resources */,
+				61CA07998FC9A2A5620E8B44 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RoommateCoins;
+			packageProductDependencies = (
+				555F91191D0EA63A399E8641 /* NeoPop */,
+			);
+			productName = RoommateCoins;
+			productReference = 1488A9FCE6A8ADF6AC730076 /* RoommateCoins.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EF944050CB21487CAA20A96E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					601673F270A858230C432B7F = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					98692E044ADE5FBAD5C477A9 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 67BECA4949AB5F54804059E3 /* Build configuration list for PBXProject "RoommateCoins" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A6A0EDA7BFBBDDD341EC78EE;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				86161A8DD2C3EE29AC1DB5C2 /* XCRemoteSwiftPackageReference "neopop-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1E90287753273A8B1DE1D82D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				98692E044ADE5FBAD5C477A9 /* RoommateCoins */,
+				601673F270A858230C432B7F /* RoommateCoinsTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7530DE1B6E73FFDB211C350A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF91B364A2B3914C7CC05CB2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0D3B9A86A6A7AEB8DAD2EBC8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C359DE9846AA74CCC6FC4821 /* APIClient.swift in Sources */,
+				6C02D9D502FAD945A3798192 /* AppState.swift in Sources */,
+				7CD0DA0126089C6A43BFA487 /* AuthViews.swift in Sources */,
+				CE74FEC8A2760069D6BA2DBD /* CelebrationView.swift in Sources */,
+				151F4C7CB47D25AD79344D97 /* ConfirmComponents.swift in Sources */,
+				67DCEB7525DF8E7B4D7922C1 /* DebugAutomation.swift in Sources */,
+				DE680522FCBB849010C247B4 /* ExpenseViews.swift in Sources */,
+				755ADCB8676F30C324ACA7B0 /* Format.swift in Sources */,
+				D91A8869C6C4A566D68C5FC9 /* GroupView.swift in Sources */,
+				F02105D94BE3B21B49D7E16D /* HomeView.swift in Sources */,
+				5607CBB612656F3E259218BC /* InviteViews.swift in Sources */,
+				16BB389118E6DD4BBFA4531F /* Models.swift in Sources */,
+				AAE1319F93E6A7797AEC6E2B /* NeoPopComponents.swift in Sources */,
+				9396CB8D9BBD599D6FAE6AB6 /* NotificationManager.swift in Sources */,
+				3025E10414C941C0093FF34D /* OfflineQueue.swift in Sources */,
+				BB5DE30D78AE9F514476B76C /* RoommateCoinsApp.swift in Sources */,
+				B75EF7CE0FCB8E4F97D5771E /* SettingsViews.swift in Sources */,
+				E2C1DCA6CE4D47B1058CDC99 /* SettleView.swift in Sources */,
+				D448B38A8E5E16B5BE742A74 /* Strings.swift in Sources */,
+				E38C164E7FA8CD11673247A9 /* Theme.swift in Sources */,
+				D7C38A8A3C50C2CDBB520859 /* WalletView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E4127283BCF63AD1F50F5AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8BD8F37FDC828508DC2E7CD /* FormatTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D0C7995375CAC24DE5310DA0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 98692E044ADE5FBAD5C477A9 /* RoommateCoins */;
+			targetProxy = 800F4D3CE4EC58E110C92013 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0446FC90B0D5ED6728CD9A8F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		3750C6A359A7E685EF89C027 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = RoommateCoins/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.roommatecoins;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		3790B50633905BA7D34AC59A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		4A84F89DCDC24A5B2FEED15B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.RoommateCoinsTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RoommateCoins.app/RoommateCoins";
+			};
+			name = Debug;
+		};
+		A4AFB5C12C3B3FD2FFA26FFF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.RoommateCoinsTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RoommateCoins.app/RoommateCoins";
+			};
+			name = Release;
+		};
+		FF88050E69C2B1A788592CDE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = RoommateCoins/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.roommatecoins;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		67BECA4949AB5F54804059E3 /* Build configuration list for PBXProject "RoommateCoins" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0446FC90B0D5ED6728CD9A8F /* Debug */,
+				3790B50633905BA7D34AC59A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		786C8C57D98748835C2DD91A /* Build configuration list for PBXNativeTarget "RoommateCoinsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A84F89DCDC24A5B2FEED15B /* Debug */,
+				A4AFB5C12C3B3FD2FFA26FFF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EC3B5387B47A1EA7354433F3 /* Build configuration list for PBXNativeTarget "RoommateCoins" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF88050E69C2B1A788592CDE /* Debug */,
+				3750C6A359A7E685EF89C027 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		86161A8DD2C3EE29AC1DB5C2 /* XCRemoteSwiftPackageReference "neopop-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CRED-CLUB/neopop-ios";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		555F91191D0EA63A399E8641 /* NeoPop */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 86161A8DD2C3EE29AC1DB5C2 /* XCRemoteSwiftPackageReference "neopop-ios" */;
+			productName = NeoPop;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = EF944050CB21487CAA20A96E /* Project object */;
+}

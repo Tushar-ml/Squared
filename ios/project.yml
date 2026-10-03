@@ -1,0 +1,64 @@
+name: RoommateCoins
+options:
+  bundleIdPrefix: tech.simplismart
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  NeoPop:
+    url: https://github.com/CRED-CLUB/neopop-ios
+    exactVersion: 1.0.0
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  RoommateCoins:
+    type: application
+    platform: iOS
+    sources:
+      - path: RoommateCoins
+    dependencies:
+      - package: NeoPop
+    info:
+      path: RoommateCoins/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Roommate Coins
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIUserInterfaceStyle: Dark
+        ITSAppUsesNonExemptEncryption: false
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        CFBundleURLTypes:
+          - CFBundleURLName: tech.simplismart.roommatecoins
+            CFBundleURLSchemes: [roommatecoins]
+        LSApplicationQueriesSchemes: [upi, whatsapp, phonepe, gpay, paytmmp]
+        RCAPIBaseURL: http://localhost:8080
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tech.simplismart.roommatecoins
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES
+        TARGETED_DEVICE_FAMILY: "1"
+  RoommateCoinsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [RoommateCoinsTests]
+    dependencies:
+      - target: RoommateCoins
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  RoommateCoins:
+    build:
+      targets:
+        RoommateCoins: all
+        RoommateCoinsTests: [test]
+    test:
+      targets: [RoommateCoinsTests]
