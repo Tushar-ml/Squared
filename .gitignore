@@ -7,3 +7,4 @@ ios/build/
 ios/*.xcodeproj/xcuserdata/
 DerivedData/
 backend/uploads/
+.DS_Store
