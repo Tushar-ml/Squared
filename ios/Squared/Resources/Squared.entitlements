@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.application-groups</key>
-	<array><string>group.tech.simplismart.roommatecoins</string></array>
+	<array><string>group.tech.simplismart.squared</string></array>
 </dict>
 </plist>

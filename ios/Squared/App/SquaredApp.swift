@@ -20,7 +20,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 }
 
 @main
-struct RoommateCoinsApp: App {
+struct SquaredApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @State private var state = AppState.shared
     @Environment(\.scenePhase) private var phase

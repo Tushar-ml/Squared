@@ -1,8 +1,7 @@
 # Squared
 
 Split anything (home, trips, couples, friends, work, events, or 1:1 with one friend) and earn coins for keeping it square.
-iOS app + local backend, grown from the *Roommate Coins (Splitwise Gamification MVP)* PRD. Internal identifiers
-(bundle ID, URL scheme, Xcode project, repo folder) keep the original `roommatecoins` name.
+iOS app + local backend, grown from the *Roommate Coins (Splitwise Gamification MVP)* PRD.
 
 First run: `make up` creates `backend/.env.dev` (git-ignored) from `backend/.env.example` with fresh local secrets.
 UI uses CRED's NeoPOP iOS components (`neopop-ios` 1.0.0: PopButton, PopFloatingButton, PopView, PopSwitch, PopCheckBox, PopRadioButton).
@@ -32,7 +31,7 @@ Ops reviewer: `+919000000099`. Dev OTP is `DEV_OTP` in `backend/.env.dev`.
 
 ```bash
 make ios                                   # xcodegen generate
-open ios/RoommateCoins.xcodeproj           # run on an iPhone simulator
+open ios/Squared.xcodeproj           # run on an iPhone simulator
 ```
 
 The simulator reaches the API at `http://localhost:8080`. For a real device, long-press the logo on the sign-in screen and set your Mac's LAN IP.

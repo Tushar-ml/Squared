@@ -78,7 +78,7 @@ struct InviteSheet: View {
     }
 }
 
-/// Opened from a roommatecoins://join?token= deep link.
+/// Opened from a squared://join?token= deep link.
 struct JoinGroupSheet: View {
     @Environment(AppState.self) private var state
     @Environment(\.dismiss) private var dismiss

@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "98692E044ADE5FBAD5C477A9"
-               BuildableName = "RoommateCoins.app"
-               BlueprintName = "RoommateCoins"
-               ReferencedContainer = "container:RoommateCoins.xcodeproj">
+               BlueprintIdentifier = "26451E24A9FFB9B6219EA86E"
+               BuildableName = "Squared.app"
+               BlueprintName = "Squared"
+               ReferencedContainer = "container:Squared.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -29,10 +29,10 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "601673F270A858230C432B7F"
-               BuildableName = "RoommateCoinsTests.xctest"
-               BlueprintName = "RoommateCoinsTests"
-               ReferencedContainer = "container:RoommateCoins.xcodeproj">
+               BlueprintIdentifier = "A7D023FF3CCF596744DA2DED"
+               BuildableName = "SquaredTests.xctest"
+               BlueprintName = "SquaredTests"
+               ReferencedContainer = "container:Squared.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,10 +46,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "98692E044ADE5FBAD5C477A9"
-            BuildableName = "RoommateCoins.app"
-            BlueprintName = "RoommateCoins"
-            ReferencedContainer = "container:RoommateCoins.xcodeproj">
+            BlueprintIdentifier = "26451E24A9FFB9B6219EA86E"
+            BuildableName = "Squared.app"
+            BlueprintName = "Squared"
+            ReferencedContainer = "container:Squared.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -58,10 +58,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "601673F270A858230C432B7F"
-               BuildableName = "RoommateCoinsTests.xctest"
-               BlueprintName = "RoommateCoinsTests"
-               ReferencedContainer = "container:RoommateCoins.xcodeproj">
+               BlueprintIdentifier = "A7D023FF3CCF596744DA2DED"
+               BuildableName = "SquaredTests.xctest"
+               BlueprintName = "SquaredTests"
+               ReferencedContainer = "container:Squared.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -82,10 +82,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "98692E044ADE5FBAD5C477A9"
-            BuildableName = "RoommateCoins.app"
-            BlueprintName = "RoommateCoins"
-            ReferencedContainer = "container:RoommateCoins.xcodeproj">
+            BlueprintIdentifier = "26451E24A9FFB9B6219EA86E"
+            BuildableName = "Squared.app"
+            BlueprintName = "Squared"
+            ReferencedContainer = "container:Squared.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -99,10 +99,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "98692E044ADE5FBAD5C477A9"
-            BuildableName = "RoommateCoins.app"
-            BlueprintName = "RoommateCoins"
-            ReferencedContainer = "container:RoommateCoins.xcodeproj">
+            BlueprintIdentifier = "26451E24A9FFB9B6219EA86E"
+            BuildableName = "Squared.app"
+            BlueprintName = "Squared"
+            ReferencedContainer = "container:Squared.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

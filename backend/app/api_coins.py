@@ -400,7 +400,7 @@ def create_invite(body: InviteIn, user=Depends(current_user)):
                             arm=experiment.arm_of(conn, body.group_id, cfg), config_version=cfg.version, channel="whatsapp")
         else:
             msg = f"I'm splitting expenses on Squared. Join {_invite_target(g)}: {link}"
-        return {"referral_id": rid, "token": token, "link": link, "app_link": f"roommatecoins://join?token={token}",
+        return {"referral_id": rid, "token": token, "link": link, "app_link": f"squared://join?token={token}",
                 "message": msg, "whatsapp_url": "whatsapp://send?text=" + _urlencode(msg)}
 
 
@@ -643,7 +643,7 @@ landing = APIRouter()
 @landing.get("/j/{token}", response_class=HTMLResponse)
 def invite_landing(token: str):
     read_token(token)
-    app = f"roommatecoins://join?token={token}"
+    app = f"squared://join?token={token}"
     return f"""<!doctype html><meta name=viewport content="width=device-width"><title>Join on Squared</title>
 <body style="background:#0d0d0d;color:#fff;font-family:-apple-system;padding:32px">
 <h2>You're invited to split on Squared</h2><p>Open the app to join and start earning coins together.</p>

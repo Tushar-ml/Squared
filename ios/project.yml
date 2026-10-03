@@ -1,4 +1,4 @@
-name: RoommateCoins
+name: Squared
 options:
   bundleIdPrefix: tech.simplismart
   deploymentTarget:
@@ -16,20 +16,20 @@ settings:
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 targets:
-  RoommateCoins:
+  Squared:
     type: application
     platform: iOS
     sources:
-      - path: RoommateCoins
+      - path: Squared
     dependencies:
       - package: NeoPop
-      - target: RoommateCoinsWidget
+      - target: SquaredWidget
     entitlements:
-      path: RoommateCoins/Resources/RoommateCoins.entitlements
+      path: Squared/Resources/Squared.entitlements
       properties:
-        com.apple.security.application-groups: [group.tech.simplismart.roommatecoins]
+        com.apple.security.application-groups: [group.tech.simplismart.squared]
     info:
-      path: RoommateCoins/Resources/Info.plist
+      path: Squared/Resources/Info.plist
       properties:
         CFBundleDisplayName: Squared
         CFBundleLocalizations: [en, hi]
@@ -43,49 +43,49 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         CFBundleURLTypes:
-          - CFBundleURLName: tech.simplismart.roommatecoins
-            CFBundleURLSchemes: [roommatecoins]
+          - CFBundleURLName: tech.simplismart.squared
+            CFBundleURLSchemes: [squared]
         LSApplicationQueriesSchemes: [upi, whatsapp, phonepe, gpay, paytmmp]
         RCAPIBaseURL: http://localhost:8080
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: tech.simplismart.roommatecoins
+        PRODUCT_BUNDLE_IDENTIFIER: tech.simplismart.squared
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         TARGETED_DEVICE_FAMILY: "1"
-  RoommateCoinsWidget:
+  SquaredWidget:
     type: app-extension
     platform: iOS
-    sources: [RoommateCoinsWidget]
+    sources: [SquaredWidget]
     entitlements:
-      path: RoommateCoinsWidget/RoommateCoinsWidget.entitlements
+      path: SquaredWidget/SquaredWidget.entitlements
       properties:
-        com.apple.security.application-groups: [group.tech.simplismart.roommatecoins]
+        com.apple.security.application-groups: [group.tech.simplismart.squared]
     info:
-      path: RoommateCoinsWidget/Info.plist
+      path: SquaredWidget/Info.plist
       properties:
         CFBundleDisplayName: Squared
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: tech.simplismart.roommatecoins.widget
+        PRODUCT_BUNDLE_IDENTIFIER: tech.simplismart.squared.widget
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.10"
-  RoommateCoinsTests:
+  SquaredTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [RoommateCoinsTests]
+    sources: [SquaredTests]
     dependencies:
-      - target: RoommateCoins
+      - target: Squared
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
 schemes:
-  RoommateCoins:
+  Squared:
     build:
       targets:
-        RoommateCoins: all
-        RoommateCoinsTests: [test]
+        Squared: all
+        SquaredTests: [test]
     test:
-      targets: [RoommateCoinsTests]
+      targets: [SquaredTests]

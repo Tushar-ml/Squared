@@ -29,7 +29,7 @@ private func money(_ minor: Int, _ cur: String) -> String {
     return "\(cur) " + (f.string(from: NSNumber(value: v)) ?? "\(v)")
 }
 
-struct RoommateCoinsWidgetView: View {
+struct SquaredWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: Entry
     private let amber = Color(red: 0.96, green: 0.70, blue: 0.0)
@@ -59,7 +59,7 @@ struct RoommateCoinsWidgetView: View {
                 }
                 .frame(width: 110, alignment: .leading)
             }
-            .widgetURL(URL(string: "roommatecoins://open?route=home"))
+            .widgetURL(URL(string: "squared://open?route=home"))
         } else if let s = entry.snap {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
@@ -77,7 +77,7 @@ struct RoommateCoinsWidgetView: View {
                     Text("\(s.needsYou) waiting for you").font(.system(size: 11, weight: .semibold)).foregroundStyle(amber)
                 }
             }
-            .widgetURL(URL(string: "roommatecoins://open?route=home"))
+            .widgetURL(URL(string: "squared://open?route=home"))
         } else {
             VStack(alignment: .leading) {
                 Circle().fill(amber).frame(width: 16, height: 16)
@@ -88,7 +88,7 @@ struct RoommateCoinsWidgetView: View {
     }
 }
 
-extension RoommateCoinsWidgetView {
+extension SquaredWidgetView {
     @ViewBuilder
     func balance(_ s: WidgetSnapshot, size: CGFloat) -> some View {
         if s.youOwe > 0 {
@@ -105,10 +105,10 @@ extension RoommateCoinsWidgetView {
 }
 
 @main
-struct RoommateCoinsWidget: Widget {
+struct SquaredWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "RoommateCoinsWidget", provider: Provider()) { entry in
-            RoommateCoinsWidgetView(entry: entry)
+        StaticConfiguration(kind: "SquaredWidget", provider: Provider()) { entry in
+            SquaredWidgetView(entry: entry)
                 .containerBackground(for: .widget) { Color(red: 0.05, green: 0.05, blue: 0.05) }
                 .environment(\.colorScheme, .dark)
         }

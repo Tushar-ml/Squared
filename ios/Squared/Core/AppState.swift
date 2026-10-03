@@ -199,7 +199,7 @@ final class AppState {
     }
 
     func handle(url: URL) {
-        guard url.scheme == "roommatecoins" else { return }
+        guard url.scheme == "squared" else { return }
         #if DEBUG
         if DebugAutomation.handle(url, self) { return }
         #endif
@@ -228,7 +228,7 @@ final class AppState {
 }
 
 enum Keychain {
-    private static let service = "tech.simplismart.roommatecoins"
+    private static let service = "tech.simplismart.squared"
 
     static func save(_ key: String, _ value: String) {
         delete(key)

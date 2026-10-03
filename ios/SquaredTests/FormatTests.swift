@@ -1,5 +1,5 @@
 import XCTest
-@testable import RoommateCoins
+@testable import Squared
 
 final class FormatTests: XCTestCase {
     func testINRUsesIndianGrouping() {

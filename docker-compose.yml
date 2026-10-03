@@ -1,6 +1,6 @@
-# Local dev stack for Roommate Coins. Run with OrbStack:
+# Local dev stack for Squared. Run with OrbStack:
 #   make up        (or: docker-compose up -d --build)
-name: roommate-coins
+name: squared
 
 services:
   db:

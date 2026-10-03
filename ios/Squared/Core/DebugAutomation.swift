@@ -6,7 +6,7 @@ import Foundation
 ///   -RCNoFocus                    skips keyboard autofocus
 ///   -RCRoute wallet|redeem|group:1|expense:2|settle:1   opens a screen after launch
 ///   -RCNoPrompt                   don't ask for notification permission
-///   roommatecoins://open?route=wallet|redeem|group|expense|settle&id=N
+///   squared://open?route=wallet|redeem|group|expense|settle&id=N
 enum DebugAutomation {
     static let devOTP = "123456"
     static var noFocus: Bool { ProcessInfo.processInfo.arguments.contains("-RCNoFocus") }
@@ -28,7 +28,7 @@ enum DebugAutomation {
         }
         if let i = args.firstIndex(of: "-RCRoute"), i + 1 < args.count {
             let parts = args[i + 1].split(separator: ":")
-            var url = "roommatecoins://open?route=\(parts[0])"
+            var url = "squared://open?route=\(parts[0])"
             if parts.count > 1 { url += "&id=\(parts[1])" }
             try? await Task.sleep(for: .milliseconds(600))
             if let u = URL(string: url) { _ = handle(u, state) }

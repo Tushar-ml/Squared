@@ -10,7 +10,7 @@ struct APIError: LocalizedError, Equatable {
     var isCoinsUnavailable: Bool { status == 503 }
 }
 
-/// Thin async client for the Roommate Coins API. Coin amounts are never sent (I-2).
+/// Thin async client for the Squared API. Coin amounts are never sent (I-2).
 final class APIClient {
     static let shared = APIClient()
 
