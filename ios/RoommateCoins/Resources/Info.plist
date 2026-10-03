@@ -12,6 +12,11 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>hi</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -46,6 +51,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo of a bill to attach it and read the total.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Unlock Roommate Coins with Face ID.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach a photo of a bill to an expense.</string>
 	<key>RCAPIBaseURL</key>
 	<string>http://localhost:8080</string>
 	<key>UILaunchScreen</key>
@@ -57,7 +68,5 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UIUserInterfaceStyle</key>
-	<string>Dark</string>
 </dict>
 </plist>

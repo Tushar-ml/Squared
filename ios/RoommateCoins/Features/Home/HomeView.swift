@@ -8,7 +8,6 @@ struct HomeView: View {
     @State private var loading = true
     @State private var showCreate = false
     @State private var showJoin = false
-    @State private var showSettings = false
     @State private var showNotifications = false
     @State private var unread = 0
     @State private var inviteTarget: InviteTarget?
@@ -40,19 +39,8 @@ struct HomeView: View {
             }
             .refreshable { await load() }
             .background(Theme.bg)
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .group(let id): GroupView(groupId: id)
-                case .expense(let id): ExpenseDetailView(expenseId: id)
-                case .wallet: WalletView()
-                case .redeem: RedeemView(groupId: nil)
-                case .household(let id): GroupView(groupId: id)
-                case .settle(let id): SettleView(groupId: id, creditorId: nil, showsClose: false)
-                case .insights(let id): GroupInsightsView(groupId: id)
-                case .mySpending: MyInsightsView()
-                }
-            }
-            .overlay(alignment: .bottom) {
+            .routeDestinations()
+            .safeAreaInset(edge: .bottom) {
                 NeoPopFloatingButton(title: groups.isEmpty && !loading ? "Set up your flat" : "New flat") {
                     if groups.isEmpty { state.showFlatSetup = true } else { showCreate = true }
                 }
@@ -67,7 +55,6 @@ struct HomeView: View {
         .sheet(item: $inviteTarget, onDismiss: { Task { await load() } }) { t in
             InviteSheet(groupId: t.id, groupName: t.name, coinsEnabled: true)
         }
-        .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showNotifications, onDismiss: { Task { await load() } }) { NotificationsInboxView() }
     }
 
@@ -83,7 +70,6 @@ struct HomeView: View {
                     .accessibilityHint("Opens your coins")
             }
             iconButton(unread > 0 ? "bell.badge" : "bell", label: "Notifications") { showNotifications = true }
-            iconButton("gearshape", label: "Settings") { showSettings = true }
         }
         .padding(.top, 12)
     }
@@ -149,6 +135,10 @@ struct HomeView: View {
         if let n: NotificationsResponse = try? await APIClient.shared.request("GET", "/me/notifications") { unread = n.unread ?? 0 }
         await state.refreshActivation()
         await state.refreshCoins(celebrate: false)
+        let owe = groups.map(\.myNetPaise).filter { $0 < 0 }.reduce(0, +)
+        let owed = groups.map(\.myNetPaise).filter { $0 > 0 }.reduce(0, +)
+        WidgetSnapshot(name: state.user?.name ?? "", coins: state.coinsLive ? state.balance : nil, youOwe: -owe, youAreOwed: owed,
+                       currency: groups.first?.currency ?? "INR", needsYou: inbox.count, updated: Date()).save()
         // a full-screen celebration presented mid pull-to-refresh leaves the refresh control stuck;
         // show it once the list has settled
         Task {
@@ -202,7 +192,7 @@ struct NeedsYouSection: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 SectionLabel("Needs you", color: Theme.coin)
-                Text("\(items.count)").font(.system(size: 11, weight: .black)).foregroundStyle(Theme.bg)
+                Text("\(items.count)").font(.system(size: 11, weight: .black)).foregroundStyle(Theme.onAccent)
                     .padding(.horizontal, 6).padding(.vertical, 2).background(Theme.coin)
             }
             ForEach(items) { item in

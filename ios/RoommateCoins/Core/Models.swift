@@ -13,6 +13,7 @@ struct User: Codable, Equatable {
     var hideCoins: Bool
     var introSeen: Bool
     let createdAt: String
+    var locale: String? = "en"
 }
 
 struct AuthResponse: Codable { let token: String; let isNew: Bool; let user: User }
@@ -122,11 +123,20 @@ struct Payment: Codable, Identifiable, Hashable {
     var confirmation: PaymentConfirmation?
 }
 
+struct DefaultSplit: Codable, Hashable {
+    var splitType: String?
+    var percents: [String: Double]?
+    var shares: [String: Double]?
+}
+
 struct GroupDetail: Codable {
     let id: Int
     let name: String
     let groupType: String
     var currency: String? = "INR"
+    var simplifyDebts: Bool? = false
+    var defaultSplit: DefaultSplit?
+    var createdBy: Int?
     let expectedMembers: Int?
     let arm: String?
     let coinsEnabled: Bool
@@ -361,3 +371,35 @@ struct MyInsights: Codable {
     let currency: String; let month: String; let monthLabel: String; let totalShare: Int; let totalPaid: Int
     let byGroup: [GroupShare]; let categories: [CategorySlice]; let trend: [TrendPoint]
 }
+
+// MARK: - Activity, comments, recurring, budgets, chat, attachments
+
+struct ActivityItem: Codable, Identifiable, Hashable {
+    let kind: String; let at: String; let actorId: Int; let actorName: String?; let isYou: Bool
+    let groupId: Int; let groupName: String; let currency: String
+    var expenseId: Int?; var title: String?; var amount: Int?; var myShare: Int?; var paidBy: Int?
+    var recurring: Bool?; var receiverId: Int?; var receiverName: String?; var status: String?; var body: String?
+    var id: String { "\(kind)-\(at)-\(actorId)-\(expenseId ?? 0)" }
+}
+struct ActivityResponse: Codable { let items: [ActivityItem] }
+
+struct Comment: Codable, Identifiable, Hashable { let id: String; let userId: Int; let name: String?; let isYou: Bool; let body: String; let createdAt: String }
+struct CommentsResponse: Codable { let comments: [Comment] }
+
+struct Attachment: Codable, Identifiable, Hashable { let id: String; let contentType: String; let bytes: Int; let createdAt: String }
+struct AttachmentsResponse: Codable { let attachments: [Attachment] }
+
+struct Recurring: Codable, Identifiable, Hashable {
+    let id: String; let groupId: Int; let description: String; let amountMinor: Int; let currency: String
+    let paidBy: Int; let paidByName: String?; let splitType: String; let category: String
+    let frequency: String; let day: Int; let nextRun: String; let lastRun: String?; let active: Bool
+}
+struct RecurringResponse: Codable { let recurring: [Recurring] }
+
+struct Budget: Codable, Identifiable, Hashable { let category: String; let label: String; let limit: Int; let spent: Int; let pct: Double; var id: String { category } }
+struct BudgetsResponse: Codable { let currency: String; let budgets: [Budget] }
+
+struct ChatMessage: Codable, Identifiable, Hashable { let id: String; let userId: Int; let name: String?; let isYou: Bool; let body: String; let createdAt: String }
+struct ChatResponse: Codable { let messages: [ChatMessage] }
+
+struct SearchResponse: Codable { let total: Int; let currency: String; let expenses: [Expense] }

@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 enum ExpenseCategory: String, CaseIterable, Identifiable {
@@ -26,6 +27,7 @@ struct ExpenseForm: View {
     @Environment(AppState.self) private var state
     let group: GroupDetail
     var editing: Expense? = nil
+    var recurringOnly = false
     let onSaved: () -> Void
 
     @State private var desc = ""
@@ -41,6 +43,12 @@ struct ExpenseForm: View {
     @State private var error: String?
     @State private var saved: Expense?
     @State private var showCurrency = false
+    @State private var repeatMonthly = false
+    @State private var repeatDay = min(Calendar.current.component(.day, from: Date()), 28)
+    @State private var photoItem: PhotosPickerItem?
+    @State private var receipt: UIImage?
+    @State private var scanning = false
+    @State private var scanNote: String?
     @FocusState private var focus: Int?
 
     private var groupCurrency: String { group.currency ?? "INR" }
@@ -91,7 +99,8 @@ struct ExpenseForm: View {
     private var form: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                SectionLabel(editing == nil ? "Add expense · \(group.name)" : "Edit expense")
+                SectionLabel(recurringOnly ? "New recurring bill · \(group.name)" : (editing == nil ? "Add expense · \(group.name)" : "Edit expense"))
+                if editing == nil && !recurringOnly { scanRow }
                 TextField("What was it? e.g. Wifi bill", text: $desc)
                     .font(Theme.body(20, .bold)).focused($focus, equals: -1).submitLabel(.next)
                     .onSubmit { focus = -2 }
@@ -108,8 +117,14 @@ struct ExpenseForm: View {
                     }
                 }
                 splitSection
+                if editing == nil && mode != .equal && group.defaultSplit == nil {
+                    Button("Make this the flat's default split") { Task { await saveDefaultSplit() } }
+                        .font(Theme.body(13, .bold)).frame(minHeight: 44)
+                }
+                if editing == nil { repeatSection }
                 if let error { Text(error).font(Theme.body(13)).foregroundStyle(Theme.owe) }
-                NeoPopButton(title: editing == nil ? "Save" : "Save changes", enabled: canSave && !busy, loading: busy) {
+                NeoPopButton(title: recurringOnly ? "Save recurring bill" : (editing == nil ? "Save" : "Save changes"),
+                             enabled: canSave && !busy, loading: busy) {
                     Task { await save() }
                 }
                 .padding(.top, 8)
@@ -121,6 +136,68 @@ struct ExpenseForm: View {
             .padding(20)
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var scanRow: some View {
+        PhotosPicker(selection: $photoItem, matching: .images) {
+            HStack(spacing: 12) {
+                if let receipt {
+                    Image(uiImage: receipt).resizable().scaledToFill().frame(width: 44, height: 44).clipped()
+                } else {
+                    Image(systemName: "doc.viewfinder").font(.system(size: 20, weight: .semibold)).frame(width: 44, height: 44)
+                        .background(Theme.surfaceHigh)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(receipt == nil ? "Scan a bill" : "Bill attached").font(Theme.body(15, .bold))
+                    Text(scanning ? "Reading the total…" : (scanNote ?? "Fills the amount and attaches the photo"))
+                        .font(Theme.body(12)).foregroundStyle(Theme.muted)
+                }
+                Spacer()
+                if scanning { ProgressView() }
+            }
+            .padding(10).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+        }
+        .foregroundStyle(Theme.text)
+        .onChange(of: photoItem) { _, item in Task { await scan(item) } }
+    }
+
+    private var repeatSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !recurringOnly { NeoPopToggle(label: "Repeat every month", isOn: $repeatMonthly) }
+            if repeatMonthly || recurringOnly {
+                Stepper(value: $repeatDay, in: 1...28) {
+                    Text("On the \(repeatDay)\(ordinal(repeatDay)) of each month").font(Theme.body(14, .semibold))
+                }
+                Text(recurringOnly ? "It's added automatically on that day, with a heads-up the day before."
+                                   : "Added now, then automatically every month. Everyone gets a heads-up the day before.")
+                    .font(Theme.body(12)).foregroundStyle(Theme.muted)
+            }
+        }
+    }
+
+    private func ordinal(_ n: Int) -> String { [1: "st", 2: "nd", 3: "rd", 21: "st", 22: "nd", 23: "rd"][n] ?? "th" }
+
+    private func scan(_ item: PhotosPickerItem?) async {
+        guard let item, let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) else { return }
+        receipt = img
+        scanning = true
+        let r = await ReceiptScanner.read(img)
+        scanning = false
+        if let a = r.amount { amount = a; scanNote = "Found \(currency) \(a). Check it before saving." }
+        else { scanNote = "Couldn't read a total. Type the amount; the photo stays attached." }
+        if desc.isEmpty, let m = r.merchant { desc = String(m.prefix(40)) }
+    }
+
+    private func saveDefaultSplit() async {
+        var ds: [String: Any] = ["split_type": mode.rawValue]
+        func keyed(_ d: [Int: Double]) -> [String: Double] { Dictionary(uniqueKeysWithValues: d.map { (String($0.key), $0.value) }) }
+        if mode == .percent { ds["percents"] = keyed(values) }
+        if mode == .shares { ds["shares"] = keyed(weights.filter { $0.value > 0 }) }
+        if mode == .exact { state.showToast("Exact amounts can't be a default. Use % or shares."); return }
+        do {
+            try await APIClient.shared.raw("PATCH", "/groups/\(group.id)", body: ["default_split": ds])
+            state.showToast("Saved as the default split")
+        } catch { state.showToast(error.localizedDescription) }
     }
 
     private var categoryRow: some View {
@@ -366,6 +443,16 @@ struct ExpenseForm: View {
             let last = UserDefaults.standard.array(forKey: "lastSplit.\(group.id)") as? [Int]
             let remembered = Set(last ?? []).intersection(ids)
             included = remembered.isEmpty ? ids : remembered
+            if let ds = group.defaultSplit {          // the flat's saved default split (FR-16)
+                if ds.splitType == "PERCENT", let p = ds.percents {
+                    mode = .percent
+                    inputs = Dictionary(uniqueKeysWithValues: p.compactMap { k, v in Int(k).map { ($0, v == v.rounded() ? "\(Int(v))" : "\(v)") } })
+                } else if ds.splitType == "SHARES", let sh = ds.shares {
+                    mode = .shares
+                    weights = Dictionary(uniqueKeysWithValues: sh.compactMap { k, v in Int(k).map { ($0, v) } })
+                }
+            }
+            repeatMonthly = recurringOnly
             focus = -1
         }
     }
@@ -393,9 +480,27 @@ struct ExpenseForm: View {
                 onSaved()
                 state.refreshTick += 1
                 dismiss()
+            } else if recurringOnly {
+                try await APIClient.shared.raw("POST", "/groups/\(group.id)/recurring", body: [
+                    "expense": requestBody(for: total), "frequency": "MONTHLY", "day": repeatDay])
+                state.showToast("\(desc) will be added on the \(repeatDay)\(ordinal(repeatDay)) of each month")
+                onSaved()
+                dismiss()
             } else {
                 let e: Expense = try await APIClient.shared.request("POST", "/groups/\(group.id)/expenses", body: requestBody(for: total))
                 if mode == .equal { UserDefaults.standard.set(Array(included), forKey: "lastSplit.\(group.id)") }
+                if repeatMonthly {
+                    // added now; the schedule starts with next month's occurrence
+                    let cal = Calendar.current
+                    var comps = cal.dateComponents([.year, .month], from: cal.date(byAdding: .month, value: 1, to: Date())!)
+                    comps.day = repeatDay
+                    let start = cal.date(from: comps).map { ISO8601DateFormatter.string(from: $0, timeZone: .current, formatOptions: [.withFullDate]) }
+                    try? await APIClient.shared.raw("POST", "/groups/\(group.id)/recurring", body: [
+                        "expense": requestBody(for: total), "frequency": "MONTHLY", "day": repeatDay, "start": start])
+                }
+                if let receipt, let jpeg = receipt.jpegData(compressionQuality: 0.7) {
+                    try? await APIClient.shared.upload("/expenses/\(e.id)/attachments", data: jpeg, contentType: "image/jpeg")
+                }
                 onSaved()
                 if e.successHint != nil && group.coinsEnabled { withAnimation { saved = e } } else { dismiss() }
             }
@@ -408,7 +513,7 @@ struct ExpenseForm: View {
     private func successSheet(_ e: Expense) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             Spacer().frame(height: 10)
-            Image(systemName: "checkmark").font(.system(size: 26, weight: .black)).foregroundStyle(Theme.bg)
+            Image(systemName: "checkmark").font(.system(size: 26, weight: .black)).foregroundStyle(Theme.onAccent)
                 .frame(width: 56, height: 56).background(Theme.owed)
             let names = (e.successHint?.notified ?? []).compactMap { $0 }
             if let hint = e.successHint, hint.adderCoins > 0 {

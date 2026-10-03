@@ -7,18 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A8376F82DDB517B98CF7C1D /* AppLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733AF816AD6E1616AEC1A836 /* AppLock.swift */; };
 		151F4C7CB47D25AD79344D97 /* ConfirmComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */; };
 		15902C815EDC3316F672E33B /* CurrencyPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D6566ABC678DC14383D7F3 /* CurrencyPicker.swift */; };
 		16BB389118E6DD4BBFA4531F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0901B884E242C2DC7D38414 /* Models.swift */; };
+		1BA0C7CDFF42AEF576768390 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 41C1B9AA50CE5F2912934558 /* Localizable.strings */; };
 		1C60051D835B1BA2425E2722 /* ActivationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8648397496CB5056524A9557 /* ActivationViews.swift */; };
+		2BE3D569C43F0ABBB5FC5B42 /* RoommateCoinsWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6E2ED6AF39473C04EE661A40 /* RoommateCoinsWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2CCAC1CF401DA3AB839C83E9 /* NeoPop in Frameworks */ = {isa = PBXBuildFile; productRef = 555F91191D0EA63A399E8641 /* NeoPop */; };
 		3025E10414C941C0093FF34D /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 472A66A13339B85F09997C49 /* OfflineQueue.swift */; };
+		436C0FA85E01CC98806F8454 /* MainTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7CFA6DC990D44589ECBC9A1 /* MainTabs.swift */; };
+		4BDA3BB793E7294B0DB9E916 /* GroupFeatureViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE76FF7A78F7233D96D9022D /* GroupFeatureViews.swift */; };
 		5607CBB612656F3E259218BC /* InviteViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24A3A66DDDD0793EE1EB083F /* InviteViews.swift */; };
 		56C6480A0443FF170E50211E /* ExpenseForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CEDDF43DA1EF39C4D96DEC /* ExpenseForm.swift */; };
+		663C19409D324742F94EDC1F /* ReceiptScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C897B8F319040C0ADF31304D /* ReceiptScanner.swift */; };
 		67DCEB7525DF8E7B4D7922C1 /* DebugAutomation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */; };
 		6C02D9D502FAD945A3798192 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A328EA2717E13E84605A1D0 /* AppState.swift */; };
 		755ADCB8676F30C324ACA7B0 /* Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B05DD6395D490E9BA03F4A3 /* Format.swift */; };
 		7CD0DA0126089C6A43BFA487 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA61B4BEFA5DF20F2ED379F7 /* AuthViews.swift */; };
+		80C5BF364A13A3F3D5653601 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = E899946226595939CE9C6BAF /* WidgetSnapshot.swift */; };
+		81E5DDB131053971BBCE6217 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE259788FE4455EEE48529A /* WidgetSnapshot.swift */; };
 		84A79692E56DBC72BB9E3B95 /* InsightsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B8CE559535E5B98371D9 /* InsightsViews.swift */; };
 		887D7061252213C0EC7E429D /* SplitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3B4D39134C844E6A09B803 /* SplitMath.swift */; };
 		9396CB8D9BBD599D6FAE6AB6 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */; };
@@ -29,6 +37,7 @@
 		BB5DE30D78AE9F514476B76C /* RoommateCoinsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368B6F4BFF16C2965171304E /* RoommateCoinsApp.swift */; };
 		C359DE9846AA74CCC6FC4821 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CAA2516D330C18995A8989 /* APIClient.swift */; };
 		CE74FEC8A2760069D6BA2DBD /* CelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A209665E775B81F8DF8B72C /* CelebrationView.swift */; };
+		D42458586FA5F06744A8D22E /* RoommateCoinsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 006EB793015C9DD6F3527415 /* RoommateCoinsWidget.swift */; };
 		D448B38A8E5E16B5BE742A74 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21B65D79262DC1F5FC05480 /* Strings.swift */; };
 		D7C38A8A3C50C2CDBB520859 /* WalletView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049AE0A3017E464DFD0D6F5 /* WalletView.swift */; };
 		D91A8869C6C4A566D68C5FC9 /* GroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C407FEF1409959159EDB735F /* GroupView.swift */; };
@@ -48,10 +57,33 @@
 			remoteGlobalIDString = 98692E044ADE5FBAD5C477A9;
 			remoteInfo = RoommateCoins;
 		};
+		B23AD33EC20B143B608C518E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF944050CB21487CAA20A96E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 55A83C0E57A48112552EFDF0;
+			remoteInfo = RoommateCoinsWidget;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		A9BE9EE167C039C8B2FB1A54 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2BE3D569C43F0ABBB5FC5B42 /* RoommateCoinsWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		006EB793015C9DD6F3527415 /* RoommateCoinsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoommateCoinsWidget.swift; sourceTree = "<group>"; };
 		073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmComponents.swift; sourceTree = "<group>"; };
+		129E5C55824CD26245EE668F /* RoommateCoinsWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RoommateCoinsWidget.entitlements; sourceTree = "<group>"; };
 		14826075CD833E6A0B64FE91 /* FlatSetupFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlatSetupFlow.swift; sourceTree = "<group>"; };
 		1488A9FCE6A8ADF6AC730076 /* RoommateCoins.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RoommateCoins.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19A1F8A3DF1D20FADFBDBA5E /* WalkthroughView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkthroughView.swift; sourceTree = "<group>"; };
@@ -61,28 +93,38 @@
 		368B6F4BFF16C2965171304E /* RoommateCoinsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoommateCoinsApp.swift; sourceTree = "<group>"; };
 		38E3233562BA1DCDBD0B8246 /* ExpenseViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseViews.swift; sourceTree = "<group>"; };
 		3B05DD6395D490E9BA03F4A3 /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
+		3EE259788FE4455EEE48529A /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		41C1B9AA50CE5F2912934558 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = hi.lproj/Localizable.strings; sourceTree = "<group>"; };
 		472A66A13339B85F09997C49 /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
+		47E0DF3594F0012B164A8640 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4879BDC034E74287B7A536AF /* RoommateCoinsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RoommateCoinsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5915B49DCF56376FBDB0E237 /* SettleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettleView.swift; sourceTree = "<group>"; };
 		68CAA2516D330C18995A8989 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		6E2ED6AF39473C04EE661A40 /* RoommateCoinsWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RoommateCoinsWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		733AF816AD6E1616AEC1A836 /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		7A209665E775B81F8DF8B72C /* CelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationView.swift; sourceTree = "<group>"; };
 		7E2FDC785AA6AFE3B25E1166 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8648397496CB5056524A9557 /* ActivationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationViews.swift; sourceTree = "<group>"; };
 		8A328EA2717E13E84605A1D0 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		8FF3B8CE559535E5B98371D9 /* InsightsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsViews.swift; sourceTree = "<group>"; };
 		A027AA040FA7DCD89F605F7E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A02B1DEDB0A79F6F142CAD72 /* RoommateCoins.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RoommateCoins.entitlements; sourceTree = "<group>"; };
 		B0901B884E242C2DC7D38414 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		B21B65D79262DC1F5FC05480 /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
 		B3D96BDE36DEE1D8D6CFF66C /* SettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViews.swift; sourceTree = "<group>"; };
 		B7D6566ABC678DC14383D7F3 /* CurrencyPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyPicker.swift; sourceTree = "<group>"; };
 		B96E6AF0B4F8DCCB5CA40BD6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		C407FEF1409959159EDB735F /* GroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupView.swift; sourceTree = "<group>"; };
+		C897B8F319040C0ADF31304D /* ReceiptScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptScanner.swift; sourceTree = "<group>"; };
 		D049AE0A3017E464DFD0D6F5 /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
 		D4CEDDF43DA1EF39C4D96DEC /* ExpenseForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseForm.swift; sourceTree = "<group>"; };
 		D9BEA1B055C97276EFB5DB6C /* NeoPopComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeoPopComponents.swift; sourceTree = "<group>"; };
 		E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAutomation.swift; sourceTree = "<group>"; };
+		E7CFA6DC990D44589ECBC9A1 /* MainTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabs.swift; sourceTree = "<group>"; };
+		E899946226595939CE9C6BAF /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		ED4D0B304B82F27E4875656F /* FormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatTests.swift; sourceTree = "<group>"; };
+		EE76FF7A78F7233D96D9022D /* GroupFeatureViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupFeatureViews.swift; sourceTree = "<group>"; };
 		FA61B4BEFA5DF20F2ED379F7 /* AuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -122,11 +164,23 @@
 			path = Insights;
 			sourceTree = "<group>";
 		};
+		1E4754284368D3E37187A6DD /* RoommateCoinsWidget */ = {
+			isa = PBXGroup;
+			children = (
+				47E0DF3594F0012B164A8640 /* Info.plist */,
+				129E5C55824CD26245EE668F /* RoommateCoinsWidget.entitlements */,
+				006EB793015C9DD6F3527415 /* RoommateCoinsWidget.swift */,
+				3EE259788FE4455EEE48529A /* WidgetSnapshot.swift */,
+			);
+			path = RoommateCoinsWidget;
+			sourceTree = "<group>";
+		};
 		1E90287753273A8B1DE1D82D /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				1488A9FCE6A8ADF6AC730076 /* RoommateCoins.app */,
 				4879BDC034E74287B7A536AF /* RoommateCoinsTests.xctest */,
+				6E2ED6AF39473C04EE661A40 /* RoommateCoinsWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -134,9 +188,18 @@
 		219C65CD16A76B33393A7821 /* Group */ = {
 			isa = PBXGroup;
 			children = (
+				EE76FF7A78F7233D96D9022D /* GroupFeatureViews.swift */,
 				C407FEF1409959159EDB735F /* GroupView.swift */,
 			);
 			path = Group;
+			sourceTree = "<group>";
+		};
+		23FD66B7C1C18AAC8526DF73 /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				E7CFA6DC990D44589ECBC9A1 /* MainTabs.swift */,
+			);
+			path = Main;
 			sourceTree = "<group>";
 		};
 		25127EDF83991440585E82AB /* DesignSystem */ = {
@@ -201,6 +264,8 @@
 			children = (
 				7E2FDC785AA6AFE3B25E1166 /* Assets.xcassets */,
 				A027AA040FA7DCD89F605F7E /* Info.plist */,
+				41C1B9AA50CE5F2912934558 /* Localizable.strings */,
+				A02B1DEDB0A79F6F142CAD72 /* RoommateCoins.entitlements */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -210,6 +275,7 @@
 			children = (
 				399E98CCA554033DEDD8FC37 /* RoommateCoins */,
 				D184B9958D2C8D7EAE877F50 /* RoommateCoinsTests */,
+				1E4754284368D3E37187A6DD /* RoommateCoinsWidget */,
 				1E90287753273A8B1DE1D82D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -252,14 +318,17 @@
 			isa = PBXGroup;
 			children = (
 				68CAA2516D330C18995A8989 /* APIClient.swift */,
+				733AF816AD6E1616AEC1A836 /* AppLock.swift */,
 				8A328EA2717E13E84605A1D0 /* AppState.swift */,
 				E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */,
 				3B05DD6395D490E9BA03F4A3 /* Format.swift */,
 				B0901B884E242C2DC7D38414 /* Models.swift */,
 				EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */,
 				472A66A13339B85F09997C49 /* OfflineQueue.swift */,
+				C897B8F319040C0ADF31304D /* ReceiptScanner.swift */,
 				2B3B4D39134C844E6A09B803 /* SplitMath.swift */,
 				B21B65D79262DC1F5FC05480 /* Strings.swift */,
+				E899946226595939CE9C6BAF /* WidgetSnapshot.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -274,6 +343,7 @@
 				0D35C303FF5649D5035F54EC /* Home */,
 				115ECA4DBEEA8FC5563759F3 /* Insights */,
 				C6DFAEBC7C6C14C6D7D99D14 /* Invite */,
+				23FD66B7C1C18AAC8526DF73 /* Main */,
 				AC39D447B34C3D73F96D9190 /* Onboarding */,
 				0481106390F0797C3B8CBD47 /* Settings */,
 				BD1F72D5D74EE9591FED1C0D /* Settle */,
@@ -284,6 +354,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		55A83C0E57A48112552EFDF0 /* RoommateCoinsWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 40FB5CB8A737B4E4E58F0ECD /* Build configuration list for PBXNativeTarget "RoommateCoinsWidget" */;
+			buildPhases = (
+				10310C751EDF37E60FA784BA /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RoommateCoinsWidget;
+			packageProductDependencies = (
+			);
+			productName = RoommateCoinsWidget;
+			productReference = 6E2ED6AF39473C04EE661A40 /* RoommateCoinsWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		601673F270A858230C432B7F /* RoommateCoinsTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 786C8C57D98748835C2DD91A /* Build configuration list for PBXNativeTarget "RoommateCoinsTests" */;
@@ -309,10 +396,12 @@
 				0D3B9A86A6A7AEB8DAD2EBC8 /* Sources */,
 				7530DE1B6E73FFDB211C350A /* Resources */,
 				61CA07998FC9A2A5620E8B44 /* Frameworks */,
+				A9BE9EE167C039C8B2FB1A54 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				30629DD4A4FD4FF8DBC4D37F /* PBXTargetDependency */,
 			);
 			name = RoommateCoins;
 			packageProductDependencies = (
@@ -331,6 +420,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					55A83C0E57A48112552EFDF0 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
 					601673F270A858230C432B7F = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
@@ -347,6 +440,7 @@
 			knownRegions = (
 				Base,
 				en,
+				hi,
 			);
 			mainGroup = A6A0EDA7BFBBDDD341EC78EE;
 			minimizedProjectReferenceProxies = 1;
@@ -359,6 +453,7 @@
 			projectRoot = "";
 			targets = (
 				98692E044ADE5FBAD5C477A9 /* RoommateCoins */,
+				55A83C0E57A48112552EFDF0 /* RoommateCoinsWidget */,
 				601673F270A858230C432B7F /* RoommateCoinsTests */,
 			);
 		};
@@ -370,6 +465,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EF91B364A2B3914C7CC05CB2 /* Assets.xcassets in Resources */,
+				1BA0C7CDFF42AEF576768390 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -382,6 +478,7 @@
 			files = (
 				C359DE9846AA74CCC6FC4821 /* APIClient.swift in Sources */,
 				1C60051D835B1BA2425E2722 /* ActivationViews.swift in Sources */,
+				0A8376F82DDB517B98CF7C1D /* AppLock.swift in Sources */,
 				6C02D9D502FAD945A3798192 /* AppState.swift in Sources */,
 				7CD0DA0126089C6A43BFA487 /* AuthViews.swift in Sources */,
 				CE74FEC8A2760069D6BA2DBD /* CelebrationView.swift in Sources */,
@@ -392,14 +489,17 @@
 				DE680522FCBB849010C247B4 /* ExpenseViews.swift in Sources */,
 				A5AC498F53767CFFE9568D37 /* FlatSetupFlow.swift in Sources */,
 				755ADCB8676F30C324ACA7B0 /* Format.swift in Sources */,
+				4BDA3BB793E7294B0DB9E916 /* GroupFeatureViews.swift in Sources */,
 				D91A8869C6C4A566D68C5FC9 /* GroupView.swift in Sources */,
 				F02105D94BE3B21B49D7E16D /* HomeView.swift in Sources */,
 				84A79692E56DBC72BB9E3B95 /* InsightsViews.swift in Sources */,
 				5607CBB612656F3E259218BC /* InviteViews.swift in Sources */,
+				436C0FA85E01CC98806F8454 /* MainTabs.swift in Sources */,
 				16BB389118E6DD4BBFA4531F /* Models.swift in Sources */,
 				AAE1319F93E6A7797AEC6E2B /* NeoPopComponents.swift in Sources */,
 				9396CB8D9BBD599D6FAE6AB6 /* NotificationManager.swift in Sources */,
 				3025E10414C941C0093FF34D /* OfflineQueue.swift in Sources */,
+				663C19409D324742F94EDC1F /* ReceiptScanner.swift in Sources */,
 				BB5DE30D78AE9F514476B76C /* RoommateCoinsApp.swift in Sources */,
 				B75EF7CE0FCB8E4F97D5771E /* SettingsViews.swift in Sources */,
 				E2C1DCA6CE4D47B1058CDC99 /* SettleView.swift in Sources */,
@@ -408,6 +508,16 @@
 				E38C164E7FA8CD11673247A9 /* Theme.swift in Sources */,
 				9E1BB96AFE9CAE15CF0AAABD /* WalkthroughView.swift in Sources */,
 				D7C38A8A3C50C2CDBB520859 /* WalletView.swift in Sources */,
+				80C5BF364A13A3F3D5653601 /* WidgetSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10310C751EDF37E60FA784BA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D42458586FA5F06744A8D22E /* RoommateCoinsWidget.swift in Sources */,
+				81E5DDB131053971BBCE6217 /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,6 +532,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		30629DD4A4FD4FF8DBC4D37F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 55A83C0E57A48112552EFDF0 /* RoommateCoinsWidget */;
+			targetProxy = B23AD33EC20B143B608C518E /* PBXContainerItemProxy */;
+		};
 		D0C7995375CAC24DE5310DA0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 98692E044ADE5FBAD5C477A9 /* RoommateCoins */;
@@ -501,6 +616,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RoommateCoins/Resources/RoommateCoins.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = RoommateCoins/Resources/Info.plist;
@@ -608,10 +724,45 @@
 			};
 			name = Release;
 		};
+		C888A5CFEF8F347CBAD01646 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = RoommateCoinsWidget/RoommateCoinsWidget.entitlements;
+				INFOPLIST_FILE = RoommateCoinsWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.roommatecoins.widget;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		E06C08F715228F1F11E45D74 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = RoommateCoinsWidget/RoommateCoinsWidget.entitlements;
+				INFOPLIST_FILE = RoommateCoinsWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.roommatecoins.widget;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		FF88050E69C2B1A788592CDE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RoommateCoins/Resources/RoommateCoins.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = RoommateCoins/Resources/Info.plist;
@@ -628,6 +779,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		40FB5CB8A737B4E4E58F0ECD /* Build configuration list for PBXNativeTarget "RoommateCoinsWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E06C08F715228F1F11E45D74 /* Debug */,
+				C888A5CFEF8F347CBAD01646 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		67BECA4949AB5F54804059E3 /* Build configuration list for PBXProject "RoommateCoins" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

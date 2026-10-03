@@ -22,7 +22,7 @@ struct CelebrationView: View {
                 Text(celebration.title).font(Theme.body(17, .semibold)).multilineTextAlignment(.center)
                 if let m = celebration.bonusMultiplier, celebration.bonusCoins > 0 {
                     Text("Surprise: \(m)x bonus!  +\(celebration.bonusCoins) more")
-                        .font(Theme.body(16, .heavy)).foregroundStyle(Theme.bg)
+                        .font(Theme.body(16, .heavy)).foregroundStyle(Theme.onAccent)
                         .padding(.horizontal, 12).padding(.vertical, 8).background(Theme.coin)
                 }
                 if celebration.kind == "SETTLEMENT" {

@@ -12,6 +12,19 @@ enum Route: Hashable {
     case settle(Int)
     case insights(Int)
     case mySpending
+    case groupSettings(Int)
+    case recurring(Int)
+    case search(Int)
+    case chat(Int)
+}
+
+enum AppTab: Hashable { case flats, activity, coins, account }
+
+enum Appearance: String, CaseIterable, Identifiable {
+    case system, dark, light
+    var id: String { rawValue }
+    var label: String { switch self { case .system: "System"; case .dark: "Dark"; case .light: "Light" } }
+    var scheme: ColorScheme? { switch self { case .system: nil; case .dark: .dark; case .light: .light } }
 }
 
 @MainActor
@@ -35,6 +48,14 @@ final class AppState {
         didSet { UserDefaults.standard.set(pendingJoinToken, forKey: "pendingJoinToken") }
     }
     var activation: Activation?
+    var tab: AppTab = .flats
+    var appearance = Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "dark") ?? .dark {
+        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: "appearance") }
+    }
+    var locked = false
+    var faceIDEnabled = UserDefaults.standard.bool(forKey: "faceID") {
+        didSet { UserDefaults.standard.set(faceIDEnabled, forKey: "faceID") }
+    }
     var showFlatSetup = false
     var onboarded = UserDefaults.standard.bool(forKey: "onboarded") {
         didSet { UserDefaults.standard.set(onboarded, forKey: "onboarded") }
@@ -102,6 +123,7 @@ final class AppState {
         if !local { Task { try? await api.raw("POST", "/auth/logout") } }
         Keychain.delete("token")
         token = nil
+        WidgetSnapshot.clear()
         user = nil
         balance = nil
         path = []
@@ -187,6 +209,7 @@ final class AppState {
     }
 
     func open(_ route: Route) {
+        tab = .flats
         path = [route]
     }
 

@@ -100,6 +100,24 @@ final class APIClient {
         for e in events { track(e.0, groupId: e.1, props: e.2) }
     }
 
+    /// Binary upload (receipts).
+    @discardableResult
+    func upload(_ path: String, data: Data, contentType: String) async throws -> Data {
+        let base = baseURL.absoluteString.hasSuffix("/") ? String(baseURL.absoluteString.dropLast()) : baseURL.absoluteString
+        guard let url = URL(string: base + "/api/v1" + path) else { throw APIError(status: 0, message: "Bad URL", code: nil) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (out, resp) = try await session.upload(for: req, from: data)
+        let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            let msg = (try? JSONSerialization.jsonObject(with: out) as? [String: Any])?["detail"] as? String
+            throw APIError(status: status, message: msg ?? "Upload failed", code: nil)
+        }
+        return out
+    }
+
     func track(_ name: String, groupId: Int? = nil, props: [String: Any] = [:]) {
         guard token != nil else {
             queueLock.lock(); queuedEvents.append((name, groupId, props)); queueLock.unlock()

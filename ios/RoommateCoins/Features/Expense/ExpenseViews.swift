@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ExpenseDetailView: View {
@@ -44,6 +45,8 @@ struct ExpenseDetailView: View {
                             Divider().overlay(Theme.line)
                         }
                     }
+                    ReceiptsSection(expenseId: e.id)
+                    CommentsSection(expenseId: e.id)
                     HStack(spacing: 12) {
                         NeoPopButton(title: "Edit", style: .stroke, icon: "pencil", height: 44) { showEdit = true }
                         NeoPopButton(title: "Delete", style: .flatStroke, icon: "trash", height: 44) { Task { await delete() } }
@@ -168,5 +171,148 @@ private struct EditLoader: View {
                 group = try? await APIClient.shared.request("GET", "/groups/\(e.groupId)", as: GroupDetail.self)
             }
         }
+    }
+}
+
+
+/// Bill photos attached to an expense.
+struct ReceiptsSection: View {
+    @Environment(AppState.self) private var state
+    let expenseId: Int
+    @State private var items: [Attachment] = []
+    @State private var images: [String: UIImage] = [:]
+    @State private var picker: PhotosPickerItem?
+    @State private var viewing: String?
+    @State private var uploading = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                SectionLabel("Receipts")
+                Spacer()
+                PhotosPicker(selection: $picker, matching: .images) {
+                    Label(uploading ? "Uploading…" : "Add photo", systemImage: "camera").font(Theme.body(13, .bold))
+                }
+                .foregroundStyle(Theme.text)
+            }
+            if items.isEmpty {
+                Text("No bill attached.").font(Theme.body(13)).foregroundStyle(Theme.muted)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(items) { a in
+                            Button { viewing = a.id } label: {
+                                Group {
+                                    if let img = images[a.id] { Image(uiImage: img).resizable().scaledToFill() }
+                                    else if a.contentType == "application/pdf" { Image(systemName: "doc.richtext").font(.system(size: 26)) }
+                                    else { ProgressView() }
+                                }
+                                .frame(width: 84, height: 84).clipped().background(Theme.surfaceHigh)
+                                .overlay(Rectangle().stroke(Theme.line))
+                            }
+                            .accessibilityLabel("Receipt photo")
+                        }
+                    }
+                }
+            }
+        }
+        .task { await load() }
+        .onChange(of: picker) { _, item in Task { await upload(item) } }
+        .fullScreenCover(item: Binding(get: { viewing.map { IdBox(id: $0) } }, set: { viewing = $0?.id })) { box in
+            ZStack(alignment: .topTrailing) {
+                Color.black.ignoresSafeArea()
+                if let img = images[box.id] { Image(uiImage: img).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity) }
+                VStack(spacing: 12) {
+                    Button { viewing = nil } label: { Image(systemName: "xmark").font(.system(size: 18, weight: .bold)).foregroundStyle(.white).frame(width: 44, height: 44) }
+                    Button { Task { await delete(box.id) } } label: { Image(systemName: "trash").foregroundStyle(.white).frame(width: 44, height: 44) }
+                        .accessibilityLabel("Delete photo")
+                }
+                .padding()
+            }
+        }
+    }
+
+    private func load() async {
+        guard let r: AttachmentsResponse = try? await APIClient.shared.request("GET", "/expenses/\(expenseId)/attachments") else { return }
+        items = r.attachments
+        for a in items where images[a.id] == nil && a.contentType.hasPrefix("image") {
+            if let d = try? await APIClient.shared.raw("GET", "/attachments/\(a.id)"), let img = UIImage(data: d) { images[a.id] = img }
+        }
+    }
+
+    private func upload(_ item: PhotosPickerItem?) async {
+        guard let item, let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data),
+              let jpeg = img.jpegData(compressionQuality: 0.7) else { return }
+        uploading = true
+        defer { uploading = false }
+        do { try await APIClient.shared.upload("/expenses/\(expenseId)/attachments", data: jpeg, contentType: "image/jpeg"); await load() }
+        catch { state.showToast(error.localizedDescription) }
+    }
+
+    private func delete(_ id: String) async {
+        do { try await APIClient.shared.raw("DELETE", "/attachments/\(id)"); viewing = nil; images[id] = nil; await load() }
+        catch { state.showToast("Only the person who added a photo can remove it") }
+    }
+}
+
+struct IdBox: Identifiable { let id: String }
+
+/// Conversation about one expense ("was this for both weeks?").
+struct CommentsSection: View {
+    @Environment(AppState.self) private var state
+    let expenseId: Int
+    @State private var comments: [Comment] = []
+    @State private var draft = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel("Comments")
+            ForEach(comments) { c in
+                HStack(alignment: .top, spacing: 10) {
+                    Avatar(name: c.isYou ? "You" : (c.name ?? "?"), size: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(c.isYou ? "You" : (c.name ?? "")).font(Theme.body(13, .bold))
+                            Text(Format.relative(c.createdAt)).font(Theme.body(11)).foregroundStyle(Theme.muted)
+                        }
+                        Text(c.body).font(Theme.body(14))
+                    }
+                    Spacer()
+                    if c.isYou {
+                        Button { Task { await delete(c) } } label: { Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).frame(width: 32, height: 32) }
+                            .foregroundStyle(Theme.muted).accessibilityLabel("Delete comment")
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                TextField("Add a comment", text: $draft, axis: .vertical).lineLimit(1...3)
+                    .padding(10).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+                Button { Task { await send() } } label: {
+                    Image(systemName: "arrow.up").font(.system(size: 14, weight: .black)).foregroundStyle(Theme.bg)
+                        .frame(width: 40, height: 40).background(Theme.text)
+                }
+                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Post comment")
+            }
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        if let r: CommentsResponse = try? await APIClient.shared.request("GET", "/expenses/\(expenseId)/comments") { comments = r.comments }
+    }
+
+    private func send() async {
+        let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        if let r: CommentsResponse = try? await APIClient.shared.request("POST", "/expenses/\(expenseId)/comments", body: ["body": t]) {
+            comments = r.comments
+            draft = ""
+        }
+    }
+
+    private func delete(_ c: Comment) async {
+        try? await APIClient.shared.raw("DELETE", "/comments/\(c.id)")
+        await load()
     }
 }

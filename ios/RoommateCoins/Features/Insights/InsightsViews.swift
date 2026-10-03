@@ -130,6 +130,7 @@ struct GroupInsightsView: View {
     @State private var data: GroupInsights?
     @State private var error: String?
     @State private var reportURL: URL?
+    @State private var pdfURL: URL?
     @State private var exporting = false
 
     var body: some View {
@@ -139,6 +140,7 @@ struct GroupInsightsView: View {
                 if let d = data {
                     summary(d)
                     membersCard(d)
+                    BudgetsCard(groupId: groupId, currency: d.currency)
                     CategoryBreakdown(slices: d.categories, currency: d.currency)
                     TrendChart(points: d.trend, currency: d.currency, showTotal: true)
                     if !d.topExpenses.isEmpty { topCard(d) }
@@ -239,37 +241,45 @@ struct GroupInsightsView: View {
             SectionLabel("Monthly report")
             Text("Every expense with each person's share, payments, totals and what's still owed. Opens in Numbers, Excel or Sheets.")
                 .font(Theme.body(13)).foregroundStyle(Theme.muted)
-            if let url = reportURL {
-                ShareLink(item: url) {
-                    Label("Share \(d.monthLabel) report", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .heavy)).frame(maxWidth: .infinity, minHeight: 48)
-                        .foregroundStyle(Theme.bg).background(Theme.text)
-                }
-            } else {
-                NeoPopButton(title: exporting ? "Preparing…" : "Export CSV", style: .stroke, icon: "doc.text",
-                             enabled: !exporting, parent: Theme.UI.surface) { Task { await export(d) } }
+            HStack(spacing: 10) {
+                exportButton("CSV", url: reportURL) { Task { await export(d, format: "csv") } }
+                exportButton("PDF", url: pdfURL) { Task { await export(d, format: "pdf") } }
             }
         }
         .neoPopCard(depth: 4, padding: 14)
     }
 
+    @ViewBuilder
+    private func exportButton(_ kind: String, url: URL?, make: @escaping () -> Void) -> some View {
+        if let url {
+            ShareLink(item: url) {
+                Label("Share \(kind)", systemImage: "square.and.arrow.up").font(.system(size: 14, weight: .heavy))
+                    .frame(maxWidth: .infinity, minHeight: 48).foregroundStyle(Theme.bg).background(Theme.text)
+            }
+        } else {
+            NeoPopButton(title: exporting ? "…" : "Export \(kind)", style: .stroke, icon: kind == "PDF" ? "doc.richtext" : "tablecells",
+                         enabled: !exporting, parent: Theme.UI.surface, action: make)
+        }
+    }
+
     private func load() async {
         reportURL = nil
+        pdfURL = nil
         do {
             data = try await APIClient.shared.request("GET", "/groups/\(groupId)/insights?month=\(month.monthKey)")
             error = nil
         } catch { self.error = error.localizedDescription }
     }
 
-    private func export(_ d: GroupInsights) async {
+    private func export(_ d: GroupInsights, format: String) async {
         exporting = true
         defer { exporting = false }
         do {
-            let csv = try await APIClient.shared.raw("GET", "/groups/\(groupId)/report?month=\(d.month)")
+            let data = try await APIClient.shared.raw("GET", "/groups/\(groupId)/report?month=\(d.month)&format=\(format)")
             let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("\(d.groupName.replacingOccurrences(of: " ", with: "_"))_\(d.month).csv")
-            try csv.write(to: url)
-            reportURL = url
+                .appendingPathComponent("\(d.groupName.replacingOccurrences(of: " ", with: "_"))_\(d.month).\(format)")
+            try data.write(to: url)
+            if format == "pdf" { pdfURL = url } else { reportURL = url }
         } catch { self.error = error.localizedDescription }
     }
 }
@@ -346,5 +356,103 @@ struct MyInsightsView: View {
             data = try await APIClient.shared.request("GET", "/me/insights?month=\(month.monthKey)&currency=\(currency)")
             error = nil
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+
+/// Monthly category budgets with progress and an editor; the server alerts everyone at 80% and 100%.
+struct BudgetsCard: View {
+    let groupId: Int
+    let currency: String
+    @State private var budgets: [Budget] = []
+    @State private var editing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                SectionLabel("Budgets this month")
+                Spacer()
+                Button(budgets.isEmpty ? "Set budgets" : "Edit") { editing = true }.font(Theme.body(13, .bold)).foregroundStyle(Theme.text)
+            }
+            if budgets.isEmpty {
+                Text("Set a monthly limit for groceries, food or anything else. Everyone gets a heads-up at 80%.")
+                    .font(Theme.body(13)).foregroundStyle(Theme.muted)
+            }
+            ForEach(budgets) { b in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(b.label).font(Theme.body(14, .semibold))
+                        Spacer()
+                        Text("\(Format.money(b.spent, currency)) of \(Format.money(b.limit, currency))").font(Theme.body(12)).foregroundStyle(Theme.muted)
+                    }
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Theme.line)
+                            Rectangle().fill(b.pct >= 100 ? Theme.owe : (b.pct >= 80 ? Theme.coin : Theme.text))
+                                .frame(width: g.size.width * min(1, b.pct / 100))
+                        }
+                    }
+                    .frame(height: 6)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(b.label): \(Int(b.pct)) percent of budget used")
+            }
+        }
+        .neoPopCard(depth: 4, padding: 14)
+        .task { await load() }
+        .sheet(isPresented: $editing, onDismiss: { Task { await load() } }) {
+            BudgetEditor(groupId: groupId, currency: currency, existing: budgets)
+        }
+    }
+
+    private func load() async {
+        if let r: BudgetsResponse = try? await APIClient.shared.request("GET", "/groups/\(groupId)/budgets") { budgets = r.budgets }
+    }
+}
+
+private struct BudgetEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    let groupId: Int
+    let currency: String
+    let existing: [Budget]
+    @State private var values: [String: String] = [:]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(footer: Text("Leave empty for no budget.")) {
+                    ForEach(ExpenseCategory.allCases) { c in
+                        HStack {
+                            Label(c.label, systemImage: c.icon)
+                            Spacer()
+                            Text(currency).foregroundStyle(Theme.muted)
+                            TextField("0", text: Binding(get: { values[c.rawValue] ?? "" }, set: { values[c.rawValue] = $0 }))
+                                .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 90)
+                        }
+                        .listRowBackground(Theme.surface)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bg)
+            .navigationTitle("Monthly budgets")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) { Button("Save") { Task { await save() } }.bold() }
+            }
+        }
+        .onAppear {
+            for b in existing { values[b.category] = Format.majorString(b.limit, currency) }
+        }
+    }
+
+    private func save() async {
+        var body: [String: Int] = [:]
+        for c in ExpenseCategory.allCases {
+            body[c.rawValue] = Format.minor(from: values[c.rawValue] ?? "", currency: currency) ?? 0
+        }
+        _ = try? await APIClient.shared.raw("PUT", "/groups/\(groupId)/budgets", body: ["budgets": body])
+        dismiss()
     }
 }

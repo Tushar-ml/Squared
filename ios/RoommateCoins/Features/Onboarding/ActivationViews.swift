@@ -24,7 +24,7 @@ struct ActivationChecklist: View {
                     HStack(spacing: 12) {
                         Image(systemName: step.done ? "checkmark" : (isNext ? "arrow.right" : "circle"))
                             .font(.system(size: step.done || isNext ? 12 : 8, weight: .black))
-                            .foregroundStyle(step.done ? Theme.bg : (isNext ? Theme.text : Theme.muted))
+                            .foregroundStyle(step.done ? Theme.onAccent : (isNext ? Theme.text : Theme.muted))
                             .frame(width: 24, height: 24)
                             .background(step.done ? Theme.owed : Color.clear)
                             .overlay(Rectangle().stroke(step.done ? Color.clear : Theme.line))
@@ -41,10 +41,10 @@ struct ActivationChecklist: View {
             if let next = activation.nextStep {
                 Text(hint(next)).font(Theme.body(13)).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
                 NeoPopButton(title: ctaTitle(next), style: next == "confirm" && activation.confirmExpenseId != nil ? .elevatedCoin : .elevated,
-                             parent: UIColor(hex: 0x141414)) { act(next) }
+                             parent: Theme.UI.surface) { act(next) }
             }
         }
-        .neoPopCard(color: UIColor(hex: 0x141414), edge: Theme.UI.coin, depth: 6)
+        .neoPopCard(color: Theme.UI.surface, edge: Theme.UI.coin, depth: 6)
     }
 
     private func title(_ s: ActivationStep) -> String {
@@ -126,7 +126,7 @@ struct WelcomeBanner: View {
             }
         }
         .buttonStyle(.plain)
-        .neoPopCard(color: UIColor(hex: 0x1C1608), edge: Theme.UI.coin, depth: 5, padding: 14)
+        .neoPopCard(color: UIColor.dynamic(light: 0xFFF6DC, dark: 0x1C1608), edge: Theme.UI.coin, depth: 5, padding: 14)
     }
 }
 
@@ -135,7 +135,7 @@ struct ActivatedCard: View {
     let onDismiss: () -> Void
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "checkmark").font(.system(size: 15, weight: .black)).foregroundStyle(Theme.bg)
+            Image(systemName: "checkmark").font(.system(size: 15, weight: .black)).foregroundStyle(Theme.onAccent)
                 .frame(width: 32, height: 32).background(Theme.owed)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Your flat is set up").font(Theme.body(15, .heavy))

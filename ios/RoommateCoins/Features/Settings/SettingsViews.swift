@@ -55,8 +55,11 @@ struct IntroView: View {
 
 /// FR-15 preferences: hide coin UI and per-type notification toggles.
 struct SettingsView: View {
+    var showsDone = true
     @Environment(AppState.self) private var state
     @Environment(\.dismiss) private var dismiss
+    @State private var faceID = false
+    @State private var hindi = false
     @State private var prefs: [NotificationPref] = []
     @State private var hideCoins = false
     @State private var loaded = false
@@ -71,8 +74,28 @@ struct SettingsView: View {
                             Text(u.phone).font(Theme.body(14)).foregroundStyle(Theme.muted)
                             if let upi = u.upiId { Text("UPI: \(upi)").font(Theme.body(13)).foregroundStyle(Theme.muted) }
                         }
-                        NeoPopButton(title: "Edit profile", style: .stroke, height: 44) { state.needsProfile = true; dismiss() }
+                        NeoPopButton(title: "Edit profile", style: .stroke, height: 44) { state.needsProfile = true; if showsDone { dismiss() } }
                     }
+                    SectionLabel("Appearance")
+                    HStack(spacing: 0) {
+                        ForEach(Appearance.allCases) { a in
+                            Button { state.appearance = a } label: {
+                                Text(a.label).font(.system(size: 14, weight: .heavy)).frame(maxWidth: .infinity, minHeight: 42)
+                                    .foregroundStyle(state.appearance == a ? Theme.bg : Theme.text)
+                                    .background(state.appearance == a ? Theme.text : Theme.surface)
+                            }
+                            .accessibilityAddTraits(state.appearance == a ? .isSelected : [])
+                        }
+                    }
+                    .overlay(Rectangle().stroke(Theme.line))
+                    SectionLabel("Language")
+                    NeoPopToggle(label: "Notifications in हिंदी", isOn: $hindi)
+                    Button("App language: change in iOS Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                    .font(Theme.body(13, .semibold)).foregroundStyle(Theme.muted)
+                    SectionLabel("Security")
+                    NeoPopToggle(label: "Lock with Face ID", isOn: $faceID)
                     SectionLabel("Coins")
                     NeoPopToggle(label: "Hide coins", isOn: $hideCoins)
                     Text("Splitting, balances and settling work the same either way.").font(Theme.body(12)).foregroundStyle(Theme.muted)
@@ -80,7 +103,7 @@ struct SettingsView: View {
                     ForEach($prefs) { $p in NeoPopToggle(label: p.label, isOn: $p.enabled) }
                     Text("We send at most 2 coin notifications a day and none between 10 pm and 8 am.")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
-                    NeoPopButton(title: "Sign out", style: .flatStroke, height: 44) { state.signOut(); dismiss() }
+                    NeoPopButton(title: "Sign out", style: .flatStroke, height: 44) { state.signOut(); if showsDone { dismiss() } }
                         .padding(.top, 12)
                     Text("Roommate Coins \(APIClient.appVersion) · \(APIClient.shared.baseURL.host() ?? "")")
                         .font(Theme.body(11)).foregroundStyle(Theme.muted)
@@ -88,9 +111,28 @@ struct SettingsView: View {
                 .padding(24)
             }
             .background(Theme.bg)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+            .navigationTitle(showsDone ? "" : "Account")
+            .toolbar { if showsDone { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } } }
         }
-        .task { await load() }
+        .task {
+            faceID = state.faceIDEnabled
+            hindi = state.user?.locale == "hi"
+            await load()
+        }
+        .onChange(of: faceID) { _, v in
+            guard v != state.faceIDEnabled else { return }
+            if v {
+                Task {
+                    if await AppLock.authenticate(reason: "Turn on Face ID lock") { state.faceIDEnabled = true }
+                    else { faceID = false }
+                }
+            } else { state.faceIDEnabled = false }
+        }
+        .onChange(of: hindi) { _, v in
+            Task {
+                if let u: User = try? await APIClient.shared.request("PATCH", "/me", body: ["locale": v ? "hi" : "en"]) { state.user = u }
+            }
+        }
         .onChange(of: hideCoins) { _, v in if loaded { Task { await setHide(v) } } }
         .onChange(of: prefs) { old, new in if loaded && !old.isEmpty { Task { await save(new) } } }
     }

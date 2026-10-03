@@ -49,6 +49,12 @@ enum DebugAutomation {
         case "home": state.path = []
         case "mySpending": state.open(.mySpending)
         case "insights": state.open(.insights(id))
+        case "recurring": state.open(.recurring(id))
+        case "search": state.open(.search(id))
+        case "chat": state.open(.chat(id))
+        case "groupSettings": state.open(.groupSettings(id))
+        case "activity": state.tab = .activity
+        case "account": state.tab = .account
         default: return false
         }
         return true

@@ -9,6 +9,7 @@ struct WalletView: View {
     @State private var unavailable = false
     @State private var loadingMore = false
     @State private var showOdds = false
+    @State private var showRedeem = false
 
     var body: some View {
         ScrollView {
@@ -19,11 +20,11 @@ struct WalletView: View {
                     balanceCard(w)
                     HStack(spacing: 12) {
                         NeoPopButton(title: "Redeem", style: .elevatedCoin, icon: "gift.fill", enabled: !w.redemptionFrozen) {
-                            state.path.append(.redeem)
+                            showRedeem = true
                         }
                         if let pot = w.householdPots.first {
                             NeoPopButton(title: "Pot: \(pot.coins)", style: .stroke, icon: "house.fill") {
-                                state.path.append(.group(pot.groupId))
+                                state.open(.group(pot.groupId))
                             }
                         }
                     }
@@ -56,6 +57,7 @@ struct WalletView: View {
         .task { await load() }
         .onChange(of: state.refreshTick) { Task { await load() } }
         .sheet(isPresented: $showOdds) { BonusOddsSheet() }
+        .navigationDestination(isPresented: $showRedeem) { RedeemView(groupId: nil) }
     }
 
     private func balanceCard(_ w: Wallet) -> some View {
@@ -74,7 +76,7 @@ struct WalletView: View {
                     .font(Theme.body(13, .semibold))
             }
         }
-        .neoPopCard(color: UIColor(hex: 0x141414), edge: Theme.UI.coin, depth: 6, padding: 18)
+        .neoPopCard(color: Theme.UI.surface, edge: Theme.UI.coin, depth: 6, padding: 18)
     }
 
     private var history: some View {
@@ -371,8 +373,8 @@ struct VoucherCard: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
-        .neoPopCard(color: item.affordable ? UIColor(hex: 0x1A1A1A) : Theme.UI.surface,
-                    edge: item.affordable ? Theme.UI.coin : UIColor(hex: 0x333333), depth: 4, padding: 12)
+        .neoPopCard(color: item.affordable ? Theme.UI.surface : Theme.UI.surface,
+                    edge: item.affordable ? Theme.UI.coin : Theme.UI.edge, depth: 4, padding: 12)
         .opacity(item.affordable ? 1 : 0.6)
         .accessibilityElement(children: .combine)
         .accessibilityHint(item.affordable ? "Double tap to redeem" : "\(item.coinsNeeded) more coins needed")

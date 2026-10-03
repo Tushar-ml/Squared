@@ -85,3 +85,16 @@ final class SplitMathTests: XCTestCase {
         XCTAssertEqual(Format.minor(from: "1000", currency: "JPY"), 1000)
     }
 }
+
+final class ReceiptParseTests: XCTestCase {
+    func testPrefersTotalLine() {
+        let r = ReceiptScanner.parse(["FRESH MART", "Milk 2 x 30.00   60.00", "Bread 45.00", "Subtotal 105.00", "GST 5.25", "Grand Total ₹110.25"])
+        XCTAssertEqual(r.amount, "110.25")
+        XCTAssertEqual(r.merchant, "FRESH MART")
+    }
+
+    func testFallsBackToLargestNumberAndIndianGrouping() {
+        let r = ReceiptScanner.parse(["Airtel Xstream", "Plan 799", "Paid Rs. 1,178.82"])
+        XCTAssertEqual(r.amount, "1178.82")
+    }
+}

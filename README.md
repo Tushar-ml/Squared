@@ -14,7 +14,7 @@ scripts/      api.py (CLI client), sim.sh (headless simulator helpers)
 
 ```bash
 make up          # db :5433, api :8080, worker, vendor :8090, mailpit :8025
-make test        # 80 backend tests (rewards and caps, splits and rounding, FX, insights, reports, activation)
+make test        # 96 backend tests (rewards, caps, splits, FX, insights, reports, activation, recurring, budgets, chat, ops)
 make reset       # wipe DB and reseed demo data
 ```
 
@@ -44,9 +44,23 @@ DEBUG-only automation (used for headless screenshots): `scripts/sim.sh launch -R
 - **Insights**: `GET /api/v1/groups/{id}/insights?month=YYYY-MM` (paid vs share per member, categories, 6-month trend, top expenses) and `GET /api/v1/me/insights?currency=USD` (my share across all groups at live rates).
 - **Reports**: `GET /api/v1/groups/{id}/report?month=YYYY-MM` returns a CSV statement (expenses with each person's share and original currency, payments, monthly summary, outstanding balances). The app exports it through the share sheet.
 
+## Everyday features
+
+- **Recurring bills** (FR-16): `POST /groups/{id}/recurring` (monthly day 1-28 or weekly). The worker adds them on the day through the normal expense path and notifies everyone the day before. Groups can save a default split.
+- **Simplify debts**: per-group toggle; shows the fewest payments with identical totals.
+- **Comments, receipts, search**: comments per expense; bill photos (JPEG/PNG/HEIC/PDF, 6 MB, stored in `backend/uploads/`) with on-device OCR in the app to fill the amount; search by text, category, person, month and amount.
+- **Members**: leave or remove only when the person's balance is settled; group currency locks after the first expense.
+- **Budgets**: monthly limits per category with alerts at 80% and 100%.
+- **Activity feed, flat chat**, monthly **PDF** statement (`?format=pdf`), **recap card** share image (FR-17).
+- **App**: tab bar (Flats, Activity, Coins, Account), light/dark/system appearance, Face ID lock, Hindi coin copy and Hindi pushes (FR-18), home-screen widget (App Group snapshot).
+- **Ops** (FR-19): bulk reverse and a collusion-ring report (Rings tab in the console).
+- **Production adapters**: APNs (`APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_PATH`, `APNS_TOPIC`) and SMS OTP (`SMS_PROVIDER=msg91|twilio` + keys). Both stay off until configured.
+
+Everyday notifications (C1 recurring, C2 comments, C3 chat, C4 budgets) respect quiet hours and opt-outs but don't count toward the PRD's 2-per-day coin push cap.
+
 ## Design notes
 
 - Invariants from PRD 8.1 are enforced in code: rewards run from a transactional outbox (fail-open), the ledger is append-only (DB trigger), every earn has an idempotency key, every number comes from versioned config (`coin_config`), and caps and goals use IST days and ISO weeks.
 - Local dev overrides: all Home groups are in TREATMENT and the first-redemption hold is about 1 minute (`backend/app/seed.py`, `DEV_OVERRIDES`). Production defaults follow the PRD (50/50, 48 h).
 - Brands in the catalogue are placeholders (PRD Q3).
-- Not built yet: P1 items FR-16 to FR-19 (recurring bills, recap share card, Hindi, ops bulk tools), real SMS/APNs/vendor integrations, production deployment.
+- Not built: UPI collect requests (needs a payments partner), bank-SMS parsing (iOS doesn't allow reading SMS), Android, real voucher vendor, production deployment.

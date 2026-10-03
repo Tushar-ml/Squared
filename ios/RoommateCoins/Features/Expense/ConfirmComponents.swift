@@ -23,7 +23,7 @@ struct ConfirmBar: View {
             if !compact { Text(Strings.looksRight).font(Theme.body(16, .bold)) }
             if done || queued {
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark").font(.system(size: 14, weight: .black)).foregroundStyle(Theme.bg)
+                    Image(systemName: "checkmark").font(.system(size: 14, weight: .black)).foregroundStyle(Theme.onAccent)
                         .frame(width: 26, height: 26).background(Theme.owed)
                     Text(queued ? "Confirmed · \(Strings.willSync)" : "Confirmed").font(Theme.body(15, .bold))
                     Spacer()

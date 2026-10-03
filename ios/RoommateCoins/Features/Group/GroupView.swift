@@ -19,6 +19,7 @@ struct GroupView: View {
             VStack(alignment: .leading, spacing: 20) {
                 if let d = detail {
                     header(d)
+                    toolRow(d)
                     if let a = state.activation, !a.activated, let eid = a.confirmExpenseId,
                        let e = d.expenses.first(where: { $0.id == eid }), d.coinsEnabled {
                         WelcomeBanner(groupName: d.name, expense: e, firstWin: a.firstWinCoins ?? 50)
@@ -58,10 +59,10 @@ struct GroupView: View {
                 }
             }
         }
-        .overlay(alignment: .bottom) {
+        .safeAreaInset(edge: .bottom) {
             if detail != nil {
                 NeoPopFloatingButton(title: "Add expense", shimmer: false) { showAdd = true }
-                    .padding(.horizontal, 20).padding(.bottom, 8)
+                    .padding(.horizontal, 20).padding(.bottom, 4)
             }
         }
         .task { await load() }
@@ -84,17 +85,32 @@ struct GroupView: View {
             HStack(spacing: 10) {
                 BalanceText(net: d.myNetPaise, currency: d.currency)
                 Spacer()
-                NavigationLink(value: Route.insights(d.id)) {
-                    Image(systemName: "chart.bar.xaxis").font(.system(size: 16, weight: .bold)).frame(width: 44, height: 38)
-                        .overlay(Rectangle().stroke(Theme.text))
-                }
-                .foregroundStyle(Theme.text)
-                .accessibilityLabel("Spending insights")
                 NeoPopButton(title: "Invite", style: .stroke, icon: "person.badge.plus", height: 38) { showInvite = true }
                     .frame(width: 120)
             }
         }
         .padding(.top, 8)
+    }
+
+    private func toolRow(_ d: GroupDetail) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                tool("Insights", "chart.bar.xaxis", .insights(d.id))
+                tool("Recurring", "repeat", .recurring(d.id))
+                tool("Search", "magnifyingglass", .search(d.id))
+                tool("Chat", "bubble.left.and.bubble.right", .chat(d.id))
+                tool("Settings", "gearshape", .groupSettings(d.id))
+            }
+        }
+    }
+
+    private func tool(_ title: String, _ icon: String, _ route: Route) -> some View {
+        NavigationLink(value: route) {
+            Label(title, systemImage: icon).font(Theme.body(13, .semibold))
+                .padding(.horizontal, 12).frame(minHeight: 38)
+                .background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+        }
+        .foregroundStyle(Theme.text)
     }
 
     @ViewBuilder
@@ -248,12 +264,15 @@ struct HouseholdCard: View {
                     Text("\(r.redeemedBy ?? "A roommate") redeemed a \(r.brand) INR \(r.faceValueInr) voucher from the pot")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
                 }
-                NavigationLink(value: Route.redeem) {
-                    Text("Use the pot").font(Theme.body(13, .bold)).underline()
-                }.buttonStyle(.plain)
+                HStack(spacing: 18) {
+                    NavigationLink(value: Route.redeem) {
+                        Text("Use the pot").font(Theme.body(13, .bold)).underline()
+                    }.buttonStyle(.plain)
+                    RecapShareButton(groupName: groupName, h: h)
+                }
             }
         }
-        .neoPopCard(color: UIColor(hex: 0x141414), edge: h.goalMet ? Theme.UI.coin : UIColor(hex: 0x3A3A3A), depth: 6)
+        .neoPopCard(color: Theme.UI.surface, edge: h.goalMet ? Theme.UI.coin : Theme.UI.edge, depth: 6)
     }
 }
 
@@ -365,5 +384,66 @@ struct PaymentRow: View {
         .padding(14)
         .background(Theme.surface)
         .overlay(Rectangle().stroke(Theme.line))
+    }
+}
+
+
+/// FR-17: the week's household recap as an image for WhatsApp / Instagram.
+struct RecapShareButton: View {
+    let groupName: String
+    let h: Household
+    @State private var image: Image?
+    @Environment(\.displayScale) private var scale
+
+    var body: some View {
+        Group {
+            if let image {
+                ShareLink(item: image, preview: SharePreview("\(groupName) this week", image: image)) {
+                    Label("Share recap", systemImage: "square.and.arrow.up").font(Theme.body(13, .bold))
+                }
+            } else {
+                Button { render() } label: { Label("Share recap", systemImage: "square.and.arrow.up").font(Theme.body(13, .bold)) }
+            }
+        }
+        .foregroundStyle(Theme.text)
+        .onAppear(perform: render)
+    }
+
+    @MainActor private func render() {
+        let r = ImageRenderer(content: RecapCardView(groupName: groupName, h: h).environment(\.colorScheme, .dark))
+        r.scale = scale
+        if let ui = r.uiImage { image = Image(uiImage: ui) }
+    }
+}
+
+struct RecapCardView: View {
+    let groupName: String
+    let h: Household
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                CoinGlyph(size: 26)
+                Text("ROOMMATE COINS").font(.system(size: 12, weight: .black)).tracking(1.6).foregroundStyle(.white)
+                Spacer()
+            }
+            Text(groupName).font(.system(size: 30, weight: .heavy)).foregroundStyle(.white)
+            HStack(spacing: 18) {
+                ProgressRing(progress: h.progress, target: h.target, met: h.goalMet)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(h.goalMet ? "Goal met this week" : "\(h.progress) of \(h.target) confirmed this week")
+                        .font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Text("\(h.weeksSquared) week\(h.weeksSquared == 1 ? "" : "s") squared · pot \(h.potCoins) coins")
+                        .font(.system(size: 13)).foregroundStyle(Color(hex: 0xBDBDBD))
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach(h.members, id: \.userId) { m in Avatar(name: m.name ?? "?", tick: m.confirmedThisWeek, size: 34) }
+            }
+            Text("Keeping the flat square, together.").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: 0xF5B301))
+        }
+        .padding(24)
+        .frame(width: 360, alignment: .leading)
+        .background(Color(hex: 0x111111))
+        .overlay(Rectangle().stroke(Color(hex: 0xF5B301), lineWidth: 2))
     }
 }

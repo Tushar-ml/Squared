@@ -33,8 +33,8 @@ struct WalkthroughView: View {
 
             if state.pendingJoinToken != nil {
                 HStack(spacing: 10) {
-                    Image(systemName: "envelope.open.fill").foregroundStyle(Theme.bg)
-                    Text("You've been invited to a flat. Sign up to join.").font(Theme.body(14, .bold)).foregroundStyle(Theme.bg)
+                    Image(systemName: "envelope.open.fill").foregroundStyle(Theme.onAccent)
+                    Text("You've been invited to a flat. Sign up to join.").font(Theme.body(14, .bold)).foregroundStyle(Theme.onAccent)
                     Spacer()
                 }
                 .padding(12).background(Theme.coin)
@@ -179,7 +179,7 @@ private struct DemoHouseholdCard: View {
                 ForEach(["A", "P", "R"], id: \.self) { Avatar(name: $0, tick: true, size: 30) }
             }
         }
-        .neoPopCard(color: UIColor(hex: 0x141414), edge: progress >= 5 ? Theme.UI.coin : UIColor(hex: 0x3A3A3A), depth: 6)
+        .neoPopCard(color: Theme.UI.surface, edge: progress >= 5 ? Theme.UI.coin : Theme.UI.edge, depth: 6)
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1.1))
@@ -203,7 +203,7 @@ private struct DemoVoucherCard: View {
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
-                .neoPopCard(color: UIColor(hex: 0x1A1A1A), edge: Theme.UI.coin, depth: 4, padding: 12)
+                .neoPopCard(color: Theme.UI.surface, edge: Theme.UI.coin, depth: 4, padding: 12)
             }
         }
         .accessibilityHidden(true)
