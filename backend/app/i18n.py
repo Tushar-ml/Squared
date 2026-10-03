@@ -31,6 +31,8 @@ STRINGS = {
         "budget_title": "{label} budget",
         "budget_near": "{label} is at {spent} of {limit} this month.",
         "budget_over": "{label} went over budget: {spent} of {limit} this month.",
+        "pay_remind_title": "Reminder from {name}",
+        "pay_remind_body": "You owe {name} {amount} in {group}. Settle up when you can.",
     },
     "hi": {
         "n1_title": "सही है?",
@@ -62,6 +64,8 @@ STRINGS = {
         "budget_title": "{label} बजट",
         "budget_near": "इस महीने {label} {limit} में से {spent} तक पहुंच गया।",
         "budget_over": "{label} बजट से ऊपर: इस महीने {limit} में से {spent}।",
+        "pay_remind_title": "{name} की ओर से याद दिलाना",
+        "pay_remind_body": "{group} में आपको {name} को {amount} देने हैं। जब हो सके चुका दें।",
     },
 }
 

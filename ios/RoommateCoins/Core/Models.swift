@@ -41,6 +41,7 @@ struct Debt: Codable, Hashable {
     let youOwe: Bool
     let creditorUpi: String?
     let payRewardHint: Int?
+    var remindedAt: String? = nil
 }
 
 struct PersonRef: Codable, Hashable { let userId: Int; let name: String? }

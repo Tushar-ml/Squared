@@ -89,6 +89,8 @@ enum Format {
 
     static func relative(_ iso: String?) -> String {
         guard let d = date(iso) else { return "" }
+        // Past times only; small clock skew with the server shouldn't read as "in 2 sec".
+        if Date().timeIntervalSince(d) < 60 { return String(localized: "just now") }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
         return f.localizedString(for: d, relativeTo: Date())

@@ -201,6 +201,9 @@ def group_detail(group_id: int, user=Depends(current_user)):
                 item["creditor_upi"] = cred["upi_id"] if cred else None
                 if eligible:
                     item["pay_reward_hint"] = views.safe(conn, views.settle_hint, conn, group_id, a, b, cfg)
+            else:
+                last = domain.last_pay_reminder(conn, group_id, b, a)
+                item["reminded_at"] = last.isoformat() if last else None
             my_debts.append(item)
         return {
             "id": g["id"], "name": g["name"], "group_type": g["group_type"], "expected_members": g["expected_members"],

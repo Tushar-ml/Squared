@@ -539,3 +539,29 @@ def register_device(body: DeviceIn, user=Depends(current_user)):
                         ON CONFLICT (token) DO UPDATE SET user_id=EXCLUDED.user_id, updated_at=EXCLUDED.updated_at""",
                      (body.token, user["id"], body.platform, clock.now()))
     return {"ok": True}
+
+
+# ---------- reminders to pay (C5) ----------
+
+@router.post("/groups/{group_id}/debts/{debtor_id}/remind")
+def remind_to_pay(group_id: int, debtor_id: int, user=Depends(current_user)):
+    """The person who is owed nudges a roommate to settle. Once per cooldown per pair."""
+    with db.tx() as conn:
+        g = require_member(conn, group_id, user["id"])
+        owed = domain.group_debts(conn, g).get((debtor_id, user["id"]), 0)
+        if owed <= 0:
+            raise HTTPException(400, "They don't owe you anything in this flat")
+        cfg = coin_config.current(conn)
+        cooldown = timedelta(hours=cfg["push"]["remind_cooldown_hours"])
+        last = domain.last_pay_reminder(conn, group_id, user["id"], debtor_id)
+        if last and clock.now() - last < cooldown:
+            raise HTTPException(429, "You already sent a reminder. You can send another tomorrow.")
+        loc = i18n.locale_of(conn, debtor_id)
+        amount = fx.fmt(owed, g["currency"])
+        notify.enqueue(conn, cfg, user_id=debtor_id, nid="C5", group_id=group_id,
+                       title=i18n.t(loc, "pay_remind_title", name=user["name"]),
+                       body=i18n.t(loc, "pay_remind_body", name=user["name"], amount=amount, group=g["name"]),
+                       dedupe_key=f"C5:{group_id}:{user['id']}:{debtor_id}:{clock.now().isoformat()}",
+                       payload={"group_id": group_id, "creditor_id": user["id"], "route": "settle"})
+        analytics.track(conn, "pay_remind_tapped", user_id=user["id"], group_id=group_id, debtor_id=debtor_id)
+        return {"reminded_at": clock.now().isoformat(), "next_at": (clock.now() + cooldown).isoformat()}

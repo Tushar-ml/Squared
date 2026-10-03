@@ -13,8 +13,9 @@ from . import analytics, clock, push
 ACTIONABLE = {"N1", "N2"}
 CATEGORY = {"N1": "EXPENSE_CONFIRM", "N2": "PAYMENT_RECEIPT", "N3": "OPEN_WALLET", "N4": "SETTLE_NUDGE",
             "N5": "OPEN_HOUSEHOLD", "N6": "REDEEM", "N7": "OPEN_WALLET", "N8": "OPEN_GROUP", "N9": "INFO",
-            "C1": "OPEN_GROUP", "C2": "OPEN_EXPENSE", "C3": "OPEN_CHAT", "C4": "OPEN_INSIGHTS"}
-ALL_IDS = ["N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "C1", "C2", "C3", "C4"]
+            "C1": "OPEN_GROUP", "C2": "OPEN_EXPENSE", "C3": "OPEN_CHAT", "C4": "OPEN_INSIGHTS",
+            "C5": "SETTLE_NUDGE"}
+ALL_IDS = ["N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "C1", "C2", "C3", "C4", "C5"]
 # C* are everyday app notifications (recurring, comments, chat, budgets): quiet hours and opt-outs apply,
 # but they don't count toward the PRD's 2-per-day cap, which is for coin pushes only.
 

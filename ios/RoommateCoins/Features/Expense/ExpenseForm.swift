@@ -125,6 +125,7 @@ struct ExpenseForm: View {
                 if let error { Text(error).font(Theme.body(13)).foregroundStyle(Theme.owe) }
                 NeoPopButton(title: recurringOnly ? "Save recurring bill" : (editing == nil ? "Save" : "Save changes"),
                              enabled: canSave && !busy, loading: busy) {
+                    focus = nil
                     Task { await save() }
                 }
                 .padding(.top, 8)
@@ -134,6 +135,7 @@ struct ExpenseForm: View {
                 }
             }
             .padding(20)
+            .padding(.bottom, 56)  // room above the floating keyboard toolbar
         }
         .scrollDismissesKeyboard(.interactively)
     }
@@ -186,6 +188,7 @@ struct ExpenseForm: View {
         if let a = r.amount { amount = a; scanNote = "Found \(currency) \(a). Check it before saving." }
         else { scanNote = "Couldn't read a total. Type the amount; the photo stays attached." }
         if desc.isEmpty, let m = r.merchant { desc = String(m.prefix(40)) }
+        focus = nil  // fields are filled; drop the keyboard so Save is reachable
     }
 
     private func saveDefaultSplit() async {

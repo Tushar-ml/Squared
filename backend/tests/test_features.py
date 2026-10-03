@@ -265,3 +265,28 @@ def test_ops_ring_report_and_bulk_reverse(w):
     assert out["reversed"] == len(ids)
     assert w.balance("X") == 0
     assert w.req("Ops", "GET", "/admin/audit")["audit"][0]["action"] == "BULK_REVERSE"
+
+
+# ---------------------------------------------------------------- reminders to pay (C5)
+
+def test_owed_person_can_remind_once_per_cooldown_in_debtor_language(w):
+    a, b = w.user("Aman"), w.user("Priya")
+    c = w.user("Ravi")
+    g = w.flat("Aman", "Priya", "Ravi")
+    w.expense("Aman", g, 300, participants=["Aman", "Priya"])   # Priya owes Aman INR 150
+    w.req("Priya", "PATCH", "/me", {"locale": "hi"})
+    w.req("Aman", "POST", f"/groups/{g}/debts/{b}/remind")
+    n = _notifs(b, "C5")
+    assert len(n) == 1 and "Aman" in n[0]["title"] and "150" in n[0]["body"] and "चुका" in n[0]["body"]
+    assert n[0]["payload"]["route"] == "settle" and n[0]["payload"]["creditor_id"] == a
+    detail = w.req("Aman", "GET", f"/groups/{g}")
+    assert next(d for d in detail["debts"] if d["debtor_id"] == b)["reminded_at"]
+    # cooldown, then allowed again
+    w.req("Aman", "POST", f"/groups/{g}/debts/{b}/remind", expect=429)
+    clock.travel(timedelta(hours=25))
+    w.req("Aman", "POST", f"/groups/{g}/debts/{b}/remind")
+    assert len(_notifs(b, "C5")) == 2
+    # only someone who is owed can remind; can't remind someone who owes you nothing
+    w.req("Priya", "POST", f"/groups/{g}/debts/{a}/remind", expect=400)
+    w.req("Aman", "POST", f"/groups/{g}/debts/{c}/remind", expect=400)
+    w.req("Ravi", "POST", f"/groups/{g}/debts/{b}/remind", expect=400)

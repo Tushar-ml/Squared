@@ -3,7 +3,7 @@ import hashlib
 import json
 
 KNOWN_CLIENT_EVENTS = {
-    "coins_card_viewed", "expense_confirm_tapped", "remind_tapped", "payment_marked_paid", "redeem_started",
+    "coins_card_viewed", "expense_confirm_tapped", "remind_tapped", "pay_remind_tapped", "payment_marked_paid", "redeem_started",
     "invite_shared", "push_opened", "push_actioned", "kill_switch_observed", "intro_viewed", "intro_skipped",
     # activation funnel
     "onboarding_viewed", "onboarding_completed", "signup_completed", "profile_completed", "flat_setup_started",

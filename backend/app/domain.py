@@ -172,3 +172,11 @@ def inr(paise: int) -> str:
         groups.insert(0, head)
     body = ",".join(groups + [tail]) if groups else tail
     return f"{'-' if neg else ''}INR {body}" + (f".{p:02d}" if p else "")
+
+
+def last_pay_reminder(conn, group_id: int, creditor: int, debtor: int):
+    """When the creditor last reminded the debtor to pay in this group (C5), or None."""
+    r = conn.execute(
+        """SELECT max(created_at) t FROM notifications WHERE notification_id='C5' AND group_id=%s AND user_id=%s
+           AND payload->>'creditor_id' = %s""", (group_id, debtor, str(creditor))).fetchone()
+    return r["t"] if r else None

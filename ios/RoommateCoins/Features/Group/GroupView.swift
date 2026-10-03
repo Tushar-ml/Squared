@@ -13,6 +13,7 @@ struct GroupView: View {
     @State private var showIntro = false
     @State private var cardCollapsed = false
     @State private var settleTarget: Debt?
+    @State private var reminding: Int?
 
     var body: some View {
         ScrollView {
@@ -136,14 +137,51 @@ struct GroupView: View {
         if !owedToMe.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(owedToMe, id: \.self) { debt in
-                    HStack {
-                        Text("\(debt.debtorName ?? "") owes you").font(Theme.body(14)).foregroundStyle(Theme.muted)
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(debt.debtorName ?? "") owes you").font(Theme.body(14)).foregroundStyle(Theme.muted)
+                            Text(Format.money(debt.amountPaise, d.currency)).font(Theme.body(15, .bold)).foregroundStyle(Theme.owed)
+                        }
                         Spacer()
-                        Text(Format.money(debt.amountPaise, d.currency)).font(Theme.body(14, .bold)).foregroundStyle(Theme.owed)
+                        remindButton(debt)
                     }
+                    .padding(.vertical, 4)
                 }
             }
         }
+    }
+
+    /// Lets the person who is owed nudge a roommate to settle. The server allows one per pair per day.
+    @ViewBuilder
+    private func remindButton(_ debt: Debt) -> some View {
+        if let at = Format.date(debt.remindedAt), Date().timeIntervalSince(at) < 24 * 3600 {
+            Text("Reminded \(Format.relative(debt.remindedAt))").font(Theme.body(12, .semibold)).foregroundStyle(Theme.muted)
+        } else {
+            Button {
+                Task { await remind(debt) }
+            } label: {
+                HStack(spacing: 6) {
+                    if reminding == debt.debtorId { ProgressView().controlSize(.mini) }
+                    else { Image(systemName: "bell") }
+                    Text("Remind").font(Theme.body(13, .bold))
+                }
+                .padding(.horizontal, 12).frame(minHeight: 36)
+                .foregroundStyle(Theme.text)
+                .background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+            }
+            .disabled(reminding != nil)
+            .accessibilityLabel("Remind \(debt.debtorName ?? "") to pay")
+        }
+    }
+
+    private func remind(_ debt: Debt) async {
+        reminding = debt.debtorId
+        defer { reminding = nil }
+        do {
+            _ = try await APIClient.shared.raw("POST", "/groups/\(groupId)/debts/\(debt.debtorId)/remind")
+            state.showToast("Reminder sent to \(debt.debtorName ?? "them")")
+            await load()
+        } catch { state.showToast(error.localizedDescription) }
     }
 
     private func activity(_ d: GroupDetail) -> some View {
