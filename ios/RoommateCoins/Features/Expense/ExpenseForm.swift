@@ -97,7 +97,6 @@ struct ExpenseForm: View {
             .background(Theme.bg)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button(saved == nil ? "Cancel" : "Close") { dismiss() } }
-                ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } }
             }
         }
         .onAppear(perform: prefill)
@@ -137,7 +136,7 @@ struct ExpenseForm: View {
                     Button("Make this the group's default split") { Task { await saveDefaultSplit() } }
                         .font(Theme.body(13, .bold)).frame(minHeight: 44)
                 }
-                if editing == nil { repeatSection }
+                if editing == nil && ![.trip, .event, .direct].contains(GroupKind(group.groupType)) { repeatSection }
                 if let error { Text(error).font(Theme.body(13)).foregroundStyle(Theme.owe) }
                 NeoPopButton(title: recurringOnly ? "Save recurring bill" : (editing == nil ? "Save" : "Save changes"),
                              enabled: canSave && !busy, loading: busy) {
@@ -151,7 +150,6 @@ struct ExpenseForm: View {
                 }
             }
             .padding(20)
-            .padding(.bottom, 56)  // room above the floating keyboard toolbar
         }
         .scrollDismissesKeyboard(.interactively)
     }

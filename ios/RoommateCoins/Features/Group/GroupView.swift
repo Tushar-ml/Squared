@@ -220,6 +220,7 @@ struct GroupView: View {
     }
 
     private func load() async {
+        Task { await state.refreshCoins() }   // keep the header coin chip in step with rewards earned here
         do {
             let d: GroupDetail = try await APIClient.shared.request("GET", "/groups/\(groupId)")
             detail = d
