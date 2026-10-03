@@ -11,6 +11,7 @@ def counted_expenses(conn, group_id: int, week_start: date, cfg) -> list[int]:
     rows = conn.execute(
         """SELECT e.id FROM expenses e
            WHERE e.group_id=%s AND e.deleted_at IS NULL AND e.amount_paise >= %s AND e.currency='INR'
+             AND COALESCE(e.original_currency, 'INR')='INR'
              AND NOT EXISTS (SELECT 1 FROM expense_confirmations d WHERE d.expense_id=e.id
                              AND d.expense_version=e.version AND d.status='DISPUTED')
              AND (SELECT MIN(c.created_at) FROM expense_confirmations c

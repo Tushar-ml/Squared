@@ -44,6 +44,9 @@ def _clean(monkeypatch):
     seed.ensure_base()
     set_config({"experiment": {"treatment_share": 1.0}})
     monkeypatch.setattr(redemption, "vendor", FakeVendor())
+    from app import fx
+    monkeypatch.setattr(fx, "FETCHERS", [FakeFx.fetch])   # never hit the network in tests
+    FakeFx.reset()
     yield
     clock.reset()
 
@@ -59,6 +62,29 @@ class FakeVendor:
             import httpx
             raise httpx.ConnectError("vendor down")
         return {"vendor_ref": "V-" + reference[:6], "code": "CODE-" + reference[:4].upper()}
+
+
+class FakeFx:
+    """Deterministic rates. USD 1 = INR 96.32 etc. Flip `fail` to simulate an outage."""
+    DEFAULT = {"INR": 1.0, "USD": 96.32, "EUR": 104.5, "GBP": 121.0, "AED": 26.22, "JPY": 0.64, "SGD": 72.0}
+    INR_PER = dict(DEFAULT)
+    fail = False
+    calls = 0
+
+    @classmethod
+    def reset(cls):
+        cls.fail = False
+        cls.calls = 0
+        cls.INR_PER = dict(cls.DEFAULT)
+
+    @classmethod
+    def fetch(cls, base):
+        cls.calls += 1
+        if cls.fail:
+            raise RuntimeError("fx down")
+        from datetime import datetime, timezone
+        b = cls.INR_PER[base]
+        return {q: b / v for q, v in cls.INR_PER.items()}, datetime(2026, 10, 2, tzinfo=timezone.utc), "fake"
 
 
 def set_config(patch):

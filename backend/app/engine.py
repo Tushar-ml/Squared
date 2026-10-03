@@ -8,7 +8,7 @@ import hmac
 import uuid
 from datetime import timedelta
 
-from . import analytics, clock, coin_config, domain, experiment, goals, ledger, notify
+from . import analytics, clock, coin_config, domain, experiment, fx, goals, ledger, notify
 from .settings import settings
 
 
@@ -139,6 +139,10 @@ def _celebrate(conn, user_id, kind, coins, title, source_key, multiplier=None, b
         (uuid.uuid4(), user_id, kind, coins, multiplier, bonus, title, source_key, clock.now()))
 
 
+def _group_currency(conn, group_id) -> str:
+    return conn.execute("SELECT currency FROM groups WHERE id=%s", (group_id,)).fetchone()["currency"]
+
+
 # ---------------------------------------------------------------- handlers
 
 def on_expense_created(conn, ev, cfg):
@@ -156,7 +160,8 @@ def on_expense_created(conn, ev, cfg):
         notify.enqueue(
             conn, cfg, user_id=uid, nid="N1", group_id=e["group_id"],
             title="Looks right?",
-            body=f"{adder} added {e['description']} {domain.inr(e['amount_paise'])}. Your share {domain.inr(share)}. Looks right?",
+            body=f"{adder} added {e['description']} {fx.fmt(e['amount_paise'], e['currency'])}. "
+                 f"Your share {fx.fmt(share, e['currency'])}. Looks right?",
             dedupe_key=f"N1:{e['id']}:{e['version']}:{uid}",
             payload={"expense_id": e["id"], "version": e["version"], "group_id": e["group_id"]},
             batch_key=f"{e['group_id']}:{e['created_by']}", batch_title="Review expenses",
@@ -172,7 +177,7 @@ def on_expense_confirmed(conn, ev, cfg):
     arm = experiment.arm_of(conn, gid, cfg)
     if ok:
         goals.refresh_progress(conn, gid, cfg)
-    if not ok or e["currency"] != "INR":
+    if not ok or not domain.is_inr(e):
         return
     confs = domain.confirmations(conn, e["id"], e["version"])
     if any(c["status"] == "DISPUTED" for c in confs):  # AB-6
@@ -309,7 +314,7 @@ def on_payment_recorded(conn, ev, cfg):
         return
     payer = domain.user_names(conn, [p["payer_id"]]).get(p["payer_id"], "A roommate")
     notify.enqueue(conn, cfg, user_id=p["receiver_id"], nid="N2", group_id=p["group_id"], title="Got it?",
-                   body=f"{payer} says they paid you {domain.inr(p['amount_paise'])}. Got it?",
+                   body=f"{payer} says they paid you {fx.fmt(p['amount_paise'], _group_currency(conn, p['group_id']))}. Got it?",
                    dedupe_key=f"N2:{p['id']}", payload={"payment_id": p["id"], "group_id": p["group_id"]})
 
 

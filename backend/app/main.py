@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import activation, api_admin, api_coins, api_core, db, seed
+from . import activation, api_admin, api_coins, api_core, api_insights, db, seed
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Roommate Coins API", version="1.0.0")
@@ -43,6 +43,7 @@ app.include_router(api_coins.router)
 app.include_router(api_coins.landing)
 app.include_router(api_admin.router)
 app.include_router(activation.router)
+app.include_router(api_insights.router)
 app.mount("/ops/static", StaticFiles(directory=STATIC), name="ops-static")
 
 

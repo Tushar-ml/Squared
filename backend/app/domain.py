@@ -15,6 +15,11 @@ def load_expense(conn, expense_id: int, lock: bool = False) -> dict | None:
     return e
 
 
+def is_inr(expense: dict) -> bool:
+    """Rewards are INR-only in the MVP (PRD 8.13): both the group and the typed currency must be INR."""
+    return expense["currency"] == "INR" and (expense.get("original_currency") or "INR") == "INR"
+
+
 def participants(expense: dict) -> set[int]:
     return {s["user_id"] for s in expense["splits"] if s["share_paise"] > 0} | {expense["paid_by"]}
 

@@ -3,15 +3,17 @@
 Writes emit domain events via the outbox in the same transaction. Nothing here calls
 the reward engine, so expenses, balances and payments work even if rewards are down (I-1).
 """
+import json
 import logging
 import re
 import secrets
 from datetime import timedelta
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from . import analytics, clock, coin_config, db, domain, events, experiment, views
+from . import analytics, categories, clock, coin_config, db, domain, events, experiment, fx, splits, views
 from .deps import current_user, require_member
 from .settings import settings
 
@@ -124,12 +126,13 @@ class GroupCreate(BaseModel):
     name: str = Field(min_length=1, max_length=60)
     group_type: str = "HOME"
     expected_members: int | None = Field(default=None, ge=1, le=12)
+    currency: str = "INR"
 
 
 def _group_summary(conn, g, user_id, cfg):
     members = experiment.active_member_ids(conn, g["id"])
     net = domain.user_net(conn, g["id"]).get(user_id, 0)
-    return {"id": g["id"], "name": g["name"], "group_type": g["group_type"], "member_count": len(members),
+    return {"id": g["id"], "name": g["name"], "group_type": g["group_type"], "currency": g["currency"], "member_count": len(members),
             "my_net_paise": net, "coins_enabled": views.eligible(conn, g["id"], cfg)}
 
 
@@ -147,11 +150,13 @@ def list_groups(user=Depends(current_user)):
 def create_group(body: GroupCreate, user=Depends(current_user)):
     if body.group_type not in ("HOME", "TRIP", "COUPLE", "OTHER"):
         raise HTTPException(400, "Unknown group type")
+    if body.currency.upper() not in fx.SUPPORTED:
+        raise HTTPException(400, "Unsupported currency")
     with db.tx() as conn:
         cfg = coin_config.current(conn)
         g = conn.execute(
-            "INSERT INTO groups (name, group_type, expected_members, created_by, created_at) VALUES (%s,%s,%s,%s,%s) RETURNING *",
-            (body.name.strip(), body.group_type, body.expected_members, user["id"], clock.now())).fetchone()
+            "INSERT INTO groups (name, group_type, expected_members, currency, created_by, created_at) VALUES (%s,%s,%s,%s,%s,%s) RETURNING *",
+            (body.name.strip(), body.group_type, body.expected_members, body.currency.upper(), user["id"], clock.now())).fetchone()
         conn.execute("INSERT INTO group_members (group_id, user_id, joined_at) VALUES (%s,%s,%s)",
                      (g["id"], user["id"], clock.now()))
         views.safe(conn, experiment.assign, conn, g, cfg)
@@ -196,6 +201,7 @@ def group_detail(group_id: int, user=Depends(current_user)):
             my_debts.append(item)
         return {
             "id": g["id"], "name": g["name"], "group_type": g["group_type"], "expected_members": g["expected_members"],
+            "currency": g["currency"],
             "arm": views.safe(conn, experiment.arm_of, conn, group_id, cfg),
             "coins_enabled": eligible,
             "members": [{"id": m["id"], "name": names.get(m["id"]), "is_you": m["id"] == user["id"]} for m in members],
@@ -221,57 +227,91 @@ def leave_group(group_id: int, user=Depends(current_user)):
 
 class ExpenseIn(BaseModel):
     description: str = Field(min_length=1, max_length=80)
-    amount_paise: int = Field(gt=0, le=10**10)
+    amount_paise: int = Field(gt=0, le=10**12)    # minor units of `currency`
+    currency: str | None = None                   # defaults to the group currency
     paid_by: int | None = None
-    participants: list[int] | None = None  # equal split among these
-    shares: dict[int, int] | None = None     # or exact shares in paise
-    currency: str = "INR"
+    split_type: str | None = None                 # EQUAL (default), EXACT, PERCENT, SHARES
+    participants: list[int] | None = None         # EQUAL: split among these
+    exact: dict[int, int] | None = None           # EXACT: minor units per person, in `currency`
+    percents: dict[int, float] | None = None      # PERCENT: must add up to 100
+    shares: dict[int, float] | None = None        # SHARES: weights (legacy clients: exact paise)
+    category: str | None = None
 
 
 class ExpensePatch(BaseModel):
     description: str | None = Field(default=None, min_length=1, max_length=80)
-    amount_paise: int | None = Field(default=None, gt=0, le=10**10)
+    amount_paise: int | None = Field(default=None, gt=0, le=10**12)
+    currency: str | None = None
     paid_by: int | None = None
+    split_type: str | None = None
     participants: list[int] | None = None
-    shares: dict[int, int] | None = None
+    exact: dict[int, int] | None = None
+    percents: dict[int, float] | None = None
+    shares: dict[int, float] | None = None
+    category: str | None = None
 
 
-def _splits(amount: int, participants: list[int] | None, shares: dict[int, int] | None, members: set[int]) -> dict[int, int]:
-    if shares:
-        shares = {int(k): int(v) for k, v in shares.items()}
-        if sum(shares.values()) != amount or any(v < 0 for v in shares.values()):
-            raise HTTPException(400, "Shares must add up to the amount")
-        if not set(shares) <= members:
-            raise HTTPException(400, "Everyone in the split must be in the group")
-        return shares
-    parts = sorted(set(participants or members))
-    if not parts or not set(parts) <= members:
-        raise HTTPException(400, "Everyone in the split must be in the group")
-    base, rem = divmod(amount, len(parts))
-    return {u: base + (1 if i < rem else 0) for i, u in enumerate(parts)}
+def _resolve_split(body, amount: int, members: set[int]) -> tuple[str, dict[int, int], dict]:
+    split_type = (body.split_type or "").upper()
+    exact = body.exact
+    if not split_type:
+        if body.shares and not body.exact:   # legacy: `shares` used to mean exact paise
+            split_type, exact = "EXACT", {k: int(v) for k, v in body.shares.items()}
+        elif exact:
+            split_type = "EXACT"
+        else:
+            split_type = "EQUAL"
+    try:
+        shares, meta = splits.compute(amount, split_type, members, participants=body.participants, exact=exact,
+                                      percents=body.percents, shares=body.shares if split_type == "SHARES" else None)
+    except splits.SplitError as e:
+        raise HTTPException(400, str(e))
+    return split_type, shares, meta
 
 
-def _write_splits(conn, expense_id, splits):
+def _money(conn, group: dict, amount: int, currency: str | None, keep_rate=None) -> tuple[int, str | None, int | None, Decimal | None]:
+    """(amount in group currency, original currency, original minor, rate). Same currency → no originals."""
+    gcur = group["currency"]
+    cur = (currency or gcur).upper()
+    if cur == gcur:
+        return amount, None, None, None
+    if cur not in fx.SUPPORTED:
+        raise HTTPException(400, f"{cur} isn't supported yet")
+    try:
+        rate = keep_rate if keep_rate is not None else fx.rate(conn, cur, gcur)
+    except fx.FxUnavailable as e:
+        raise HTTPException(503, str(e))
+    converted = fx.convert_minor(amount, cur, gcur, rate)
+    if converted <= 0:
+        raise HTTPException(400, "That amount is too small to convert")
+    return converted, cur, amount, rate
+
+
+def _write_splits(conn, expense_id, shares):
     conn.execute("DELETE FROM expense_splits WHERE expense_id=%s", (expense_id,))
-    for u, v in splits.items():
+    for u, v in shares.items():
         conn.execute("INSERT INTO expense_splits (expense_id, user_id, share_paise) VALUES (%s,%s,%s)", (expense_id, u, v))
 
 
 @router.post("/groups/{group_id}/expenses")
 def add_expense(group_id: int, body: ExpenseIn, user=Depends(current_user)):
     with db.tx() as conn:
-        require_member(conn, group_id, user["id"])
+        g = require_member(conn, group_id, user["id"])
         members = set(experiment.active_member_ids(conn, group_id))
         paid_by = body.paid_by or user["id"]
         if paid_by not in members:
             raise HTTPException(400, "Payer must be in the group")
-        splits = _splits(body.amount_paise, body.participants, body.shares, members)
+        split_type, shares_orig, meta = _resolve_split(body, body.amount_paise, members)
+        amount_g, ocur, ominor, rate = _money(conn, g, body.amount_paise, body.currency)
+        shares = splits.reallocate(amount_g, shares_orig) if ocur else shares_orig
         now = clock.now()
         e = conn.execute(
-            """INSERT INTO expenses (group_id, description, amount_paise, currency, paid_by, created_by, created_at, updated_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
-            (group_id, body.description.strip(), body.amount_paise, body.currency, paid_by, user["id"], now, now)).fetchone()
-        _write_splits(conn, e["id"], splits)
+            """INSERT INTO expenses (group_id, description, amount_paise, currency, paid_by, created_by, created_at,
+                   updated_at, split_type, split_meta, category, original_currency, original_amount_minor, fx_rate)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (group_id, body.description.strip(), amount_g, g["currency"], paid_by, user["id"], now, now, split_type,
+             json.dumps(meta), categories.normalize(body.category, body.description), ocur, ominor, rate)).fetchone()
+        _write_splits(conn, e["id"], shares)
         events.emit(conn, "ExpenseCreated", expense_id=e["id"], group_id=group_id, version=1, user_id=user["id"])
         e = domain.load_expense(conn, e["id"])
         cfg = coin_config.current(conn)
@@ -304,22 +344,46 @@ def edit_expense(expense_id: int, body: ExpensePatch, user=Depends(current_user)
         e = domain.load_expense(conn, expense_id, lock=True)
         if not e or e["deleted_at"]:
             raise HTTPException(404, "Expense not found")
-        require_member(conn, e["group_id"], user["id"])
+        g = require_member(conn, e["group_id"], user["id"])
         members = set(experiment.active_member_ids(conn, e["group_id"])) | {s["user_id"] for s in e["splits"]}
-        amount = body.amount_paise or e["amount_paise"]
+        old_cur = e["original_currency"] or e["currency"]
+        old_amount = e["original_amount_minor"] if e["original_currency"] else e["amount_paise"]
+        cur = (body.currency or old_cur).upper()
+        amount = body.amount_paise or old_amount
         paid_by = body.paid_by or e["paid_by"]
         old_splits = {s["user_id"]: s["share_paise"] for s in e["splits"]}
-        if body.participants is not None or body.shares is not None or amount != e["amount_paise"]:
-            parts = body.participants if body.participants is not None else (None if body.shares else list(old_splits))
-            splits = _splits(amount, parts, body.shares, members)
+        split_changed = any(x is not None for x in (body.split_type, body.participants, body.exact, body.percents, body.shares))
+        money_input_changed = amount != old_amount or cur != old_cur
+        if split_changed or money_input_changed:
+            if not split_changed:
+                # re-run the stored split with the new amount
+                meta = e["split_meta"] or {}
+                body.split_type = e["split_type"]
+                body.participants = meta.get("participants") or (list(old_splits) if e["split_type"] == "EQUAL" else None)
+                body.percents = {int(k): v for k, v in meta.get("percents", {}).items()} or None
+                body.shares = {int(k): v for k, v in meta.get("shares", {}).items()} or None
+                if e["split_type"] == "EXACT":
+                    raise HTTPException(400, "This expense uses exact amounts. Update each person's amount too.")
+            split_type, shares_orig, meta = _resolve_split(body, amount, members)
+            # keep the original rate snapshot unless the currency changed
+            keep = Decimal(str(e["fx_rate"])) if (cur == old_cur and e["fx_rate"] is not None) else None
+            amount_g, ocur, ominor, rate = _money(conn, g, amount, cur, keep_rate=keep)
+            new_splits = splits.reallocate(amount_g, shares_orig) if ocur else shares_orig
         else:
-            splits = old_splits
-        money_changed = amount != e["amount_paise"] or paid_by != e["paid_by"] or splits != old_splits
+            split_type, meta = e["split_type"], e["split_meta"]
+            amount_g, ocur, ominor, rate = e["amount_paise"], e["original_currency"], e["original_amount_minor"], e["fx_rate"]
+            new_splits = old_splits
+        money_changed = amount_g != e["amount_paise"] or paid_by != e["paid_by"] or new_splits != old_splits
         version = e["version"] + (1 if money_changed else 0)
-        conn.execute("UPDATE expenses SET description=%s, amount_paise=%s, paid_by=%s, version=%s, updated_at=%s WHERE id=%s",
-                     ((body.description or e["description"]).strip(), amount, paid_by, version, clock.now(), expense_id))
-        if splits != old_splits:
-            _write_splits(conn, expense_id, splits)
+        desc = (body.description or e["description"]).strip()
+        category = categories.normalize(body.category, desc) if body.category or body.description else e["category"]
+        conn.execute(
+            """UPDATE expenses SET description=%s, amount_paise=%s, paid_by=%s, version=%s, updated_at=%s, split_type=%s,
+                   split_meta=%s, category=%s, original_currency=%s, original_amount_minor=%s, fx_rate=%s WHERE id=%s""",
+            (desc, amount_g, paid_by, version, clock.now(), split_type, json.dumps(meta), category, ocur, ominor,
+             rate, expense_id))
+        if new_splits != old_splits:
+            _write_splits(conn, expense_id, new_splits)
         events.emit(conn, "ExpenseUpdated", expense_id=expense_id, group_id=e["group_id"], version=version,
                     money_changed=money_changed, user_id=user["id"])
     return get_expense(expense_id, user)

@@ -27,7 +27,7 @@ def reward_preview(conn, viewer_id: int, expense: dict, cfg) -> dict:
     w = ledger.get_wallet(conn, "USER", viewer_id)
     if not conn.execute("SELECT 1 FROM coin_ledger WHERE wallet_id=%s AND reason_code='FIRST_WIN'", (w["id"],)).fetchone():
         out["first_win_bonus"] = cfg["earn"]["first_win"]
-    if expense["amount_paise"] < cfg["min_expense_inr"] * 100 or expense["currency"] != "INR":
+    if expense["amount_paise"] < cfg["min_expense_inr"] * 100 or not domain.is_inr(expense):
         out.update(coins=0, first_win_bonus=0, capped_reason="below_min")
         return out
     confirmed = conn.execute(
@@ -77,7 +77,8 @@ def confirmation_object(conn, viewer_id: int, expense: dict, cfg, names: dict) -
         "my_response": mine["status"] if mine else None,
         "can_confirm": viewer_id in st["waiting_on"],
         "can_remind": [{"user_id": u, "name": names.get(u)} for u in can_remind],
-        "adder_reward": cfg["earn"]["expense_adder"] if expense["amount_paise"] >= cfg["min_expense_inr"] * 100 else 0,
+        "adder_reward": cfg["earn"]["expense_adder"]
+        if expense["amount_paise"] >= cfg["min_expense_inr"] * 100 and domain.is_inr(expense) else 0,
     }
     if obj["can_confirm"]:
         obj["reward_preview"] = reward_preview(conn, viewer_id, expense, cfg)
@@ -94,6 +95,12 @@ def expense_json(conn, viewer_id: int, e: dict, names: dict, cfg=None, eligible=
         "splits": [{"user_id": s["user_id"], "name": names.get(s["user_id"]), "share_paise": s["share_paise"]}
                    for s in e["splits"]],
         "my_share_paise": shares.get(viewer_id, 0),
+        "split_type": e.get("split_type", "EQUAL"),
+        "split_meta": e.get("split_meta") or {},
+        "category": e.get("category", "other"),
+        "original_currency": e.get("original_currency"),
+        "original_amount_minor": e.get("original_amount_minor"),
+        "fx_rate": float(e["fx_rate"]) if e.get("fx_rate") is not None else None,
         "created_at": e["created_at"].isoformat(), "updated_at": e["updated_at"].isoformat(),
     }
     if eligible and cfg is not None:
