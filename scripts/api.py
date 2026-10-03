@@ -4,7 +4,7 @@ import sys
 import urllib.request
 
 BASE = "http://localhost:8080/api/v1"
-OTP = "123456"  # DEV_OTP from backend/.env.dev
+OTP = "123456"  # DEV_OTP from backend/.env.dev (see backend/.env.example)
 
 
 def call(method, path, body=None, token=None, headers=None):

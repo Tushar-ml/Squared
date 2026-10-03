@@ -3,6 +3,8 @@
 Split anything (home, trips, couples, friends, work, events, or 1:1 with one friend) and earn coins for keeping it square.
 iOS app + local backend, grown from the *Roommate Coins (Splitwise Gamification MVP)* PRD. Internal identifiers
 (bundle ID, URL scheme, Xcode project, repo folder) keep the original `roommatecoins` name.
+
+First run: `make up` creates `backend/.env.dev` (git-ignored) from `backend/.env.example` with fresh local secrets.
 UI uses CRED's NeoPOP iOS components (`neopop-ios` 1.0.0: PopButton, PopFloatingButton, PopView, PopSwitch, PopCheckBox, PopRadioButton).
 
 ```
