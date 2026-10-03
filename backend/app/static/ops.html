@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coins Ops Console</title>
+<style>
+  :root { --bg:#0d0d0d; --panel:#161616; --line:#2a2a2a; --text:#fff; --muted:#8a8a8a; --amber:#f5b301; --ok:#06c270; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 -apple-system, "SF Pro Text", Inter, sans-serif; }
+  header { display:flex; gap:16px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:15px; letter-spacing:.12em; text-transform:uppercase; margin:0; }
+  nav button { background:none; border:0; color:var(--muted); padding:6px 10px; cursor:pointer; font:inherit; text-transform:uppercase; letter-spacing:.08em; font-size:12px; }
+  nav button.on { color:var(--text); border-bottom:2px solid var(--amber); }
+  main { padding:20px; max-width:1200px; }
+  .panel { background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:16px; }
+  input, select, textarea { background:#000; color:var(--text); border:1px solid var(--line); padding:9px 10px; font:inherit; }
+  textarea { width:100%; min-height:260px; font-family:ui-monospace, Menlo, monospace; font-size:12px; }
+  .btn { background:var(--text); color:#000; border:0; padding:9px 14px; font-weight:700; cursor:pointer; text-transform:uppercase; font-size:12px; letter-spacing:.06em;
+         box-shadow:3px 3px 0 #4d4d4d; }
+  .btn.ghost { background:transparent; color:var(--text); border:1px solid var(--text); box-shadow:none; }
+  .btn.amber { background:var(--amber); }
+  .btn:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #4d4d4d; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .pos { color:var(--ok); } .neg { color:var(--muted); } .tag { font-size:11px; padding:2px 6px; border:1px solid var(--line); color:var(--muted); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .muted { color:var(--muted); } .err { color:#ff8a65; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; }
+  .kpi { border:1px solid var(--line); padding:12px; } .kpi b { display:block; font-size:22px; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Coins · Ops</h1>
+  <nav id="nav" class="hidden">
+    <button data-tab="wallets" class="on">Wallets</button>
+    <button data-tab="pending">Pending</button>
+    <button data-tab="redemptions">Redemptions</button>
+    <button data-tab="config">Config</button>
+    <button data-tab="audit">Audit</button>
+    <button data-tab="system">System</button>
+  </nav>
+  <span id="who" class="muted" style="margin-left:auto"></span>
+</header>
+<main>
+  <section id="login" class="panel">
+    <p>Sign in with an Ops phone number.</p>
+    <div class="row">
+      <input id="phone" placeholder="+919000000099">
+      <button class="btn ghost" id="sendOtp">Send code</button>
+      <input id="otp" placeholder="OTP" size="8">
+      <button class="btn" id="verify">Sign in</button>
+    </div>
+    <p id="loginErr" class="err"></p>
+  </section>
+
+  <section id="tab-wallets" class="tab hidden">
+    <div class="panel row">
+      <input id="q" placeholder="Phone, name, user id, group name" size="40">
+      <button class="btn" id="search">Search</button>
+    </div>
+    <div class="panel"><table id="walletTable"></table></div>
+    <div id="walletDetail"></div>
+  </section>
+
+  <section id="tab-pending" class="tab hidden"><div class="panel"><table id="pendingTable"></table></div></section>
+  <section id="tab-redemptions" class="tab hidden"><div class="panel"><table id="redTable"></table></div></section>
+
+  <section id="tab-config" class="tab hidden">
+    <div class="panel">
+      <div class="row" style="margin-bottom:10px">
+        <b id="cfgVersion"></b>
+        <button class="btn amber" id="killOn">Kill switch ON</button>
+        <button class="btn ghost" id="killOff">Kill switch OFF</button>
+      </div>
+      <p class="muted">Edit and publish creates a new version. Every value here is read by the reward engine; nothing is hard-coded.</p>
+      <textarea id="cfgBody"></textarea>
+      <div class="row" style="margin-top:10px">
+        <input id="cfgReason" placeholder="Reason (required)" size="50">
+        <button class="btn" id="cfgSave">Publish new version</button>
+        <span id="cfgMsg"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-audit" class="tab hidden"><div class="panel"><table id="auditTable"></table></div></section>
+
+  <section id="tab-system" class="tab hidden">
+    <div class="panel"><div class="kpis" id="kpis"></div></div>
+    <div class="panel">
+      <p>Run a scheduled job now</p>
+      <div class="row" id="jobs"></div>
+      <div class="row" style="margin-top:10px"><input id="weekStart" placeholder="close-weeks week_start YYYY-MM-DD (dev)"></div>
+      <pre id="jobOut" class="muted"></pre>
+    </div>
+    <div class="panel">
+      <p>Set a group's experiment arm (dogfood / QA)</p>
+      <div class="row">
+        <input id="armGroup" placeholder="group id" size="8">
+        <select id="armValue"><option>TREATMENT</option><option>CONTROL</option></select>
+        <input id="armReason" placeholder="Reason" size="30">
+        <button class="btn ghost" id="armSave">Save</button>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const API = "/api/v1";
+let token = localStorage.getItem("opsToken") || "";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {...opts, headers: {"Content-Type": "application/json", "Authorization": "Bearer " + token, ...(opts.headers||{})}});
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body));
+  return body;
+}
+const post = (p, b) => api(p, {method: "POST", body: JSON.stringify(b || {})});
+const askReason = (what) => { const r = prompt(`Reason for ${what} (audit-logged):`); if (!r || r.trim().length < 3) { alert("A reason is required."); return null; } return r.trim(); };
+
+$("sendOtp").onclick = async () => { try { await fetch(API + "/auth/otp/request", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({phone: $("phone").value})}); $("loginErr").textContent = "Code sent."; } catch (e) { $("loginErr").textContent = e.message; } };
+$("verify").onclick = async () => {
+  try {
+    const r = await fetch(API + "/auth/otp/verify", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({phone: $("phone").value, otp: $("otp").value})});
+    const b = await r.json(); if (!r.ok) throw new Error(b.detail);
+    if (b.user.role !== "OPS") throw new Error("This account doesn't have the Ops role.");
+    token = b.token; localStorage.setItem("opsToken", token); boot();
+  } catch (e) { $("loginErr").textContent = e.message; }
+};
+
+function show(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  $("tab-" + tab).classList.remove("hidden");
+  ({pending: loadPending, redemptions: loadRedemptions, config: loadConfig, audit: loadAudit, system: loadSystem})[tab]?.();
+}
+document.querySelectorAll("#nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
+
+async function boot() {
+  try {
+    const me = await api("/me");
+    if (me.role !== "OPS") throw new Error();
+    $("who").textContent = me.name + " · " + me.phone;
+    $("login").classList.add("hidden"); $("nav").classList.remove("hidden"); show("wallets");
+  } catch { $("login").classList.remove("hidden"); }
+}
+
+$("search").onclick = async () => {
+  const r = await api("/admin/wallets?query=" + encodeURIComponent($("q").value));
+  $("walletTable").innerHTML = "<tr><th>Wallet</th><th>Balance</th><th>Deficit</th><th>Pending</th><th>Redemption</th><th></th></tr>" +
+    r.wallets.map(w => `<tr><td>${esc(w.label)} <span class="tag">${w.owner_type}</span></td><td>${w.balance}</td><td>${w.deficit}</td><td>${w.pending_entries}</td>
+    <td>${w.redemption_frozen ? "Frozen" : "Open"}</td><td><button class="btn ghost" onclick="openWallet('${w.id}')">Open</button></td></tr>`).join("");
+};
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") $("search").click(); });
+
+async function openWallet(id) {
+  const r = await api(`/admin/wallets/${id}/ledger`);
+  const w = r.wallet;
+  $("walletDetail").innerHTML = `<div class="panel"><div class="row"><b>${esc(w.label)}</b><span class="tag">balance ${w.balance}</span><span class="tag">deficit ${w.deficit}</span>
+    <span class="tag">${r.integrity ? "INTEGRITY MISMATCH " + esc(JSON.stringify(r.integrity)) : "ledger ok"}</span>
+    <button class="btn ${w.redemption_frozen ? "" : "amber"}" onclick="freeze('${w.id}', ${!w.redemption_frozen})">${w.redemption_frozen ? "Unfreeze redemption" : "Freeze redemption"}</button></div></div>
+    <div class="panel"><table><tr><th>When</th><th>Amount</th><th>Type</th><th>Reason</th><th>Key / config</th><th></th></tr>
+    ${r.entries.map(e => `<tr><td>${new Date(e.created_at).toLocaleString()}</td><td class="${e.amount >= 0 ? "pos" : "neg"}">${e.amount > 0 ? "+" : ""}${e.amount}</td>
+      <td>${e.entry_type} <span class="tag">${e.status}</span></td><td>${esc(e.text)}</td><td class="muted" style="font-size:11px">${esc(e.idempotency_key)}<br>v${e.config_version} ${esc(JSON.stringify(e.metadata))}</td>
+      <td>${(e.entry_type === "EARN" || e.entry_type === "REFUND") && !e.reversed && e.status !== "REJECTED" ? `<button class="btn ghost" onclick="reverseEntry('${e.id}','${id}')">Reverse</button>` : (e.reversed ? '<span class="tag">reversed</span>' : "")}</td></tr>`).join("")}</table></div>
+    <div class="panel"><b>Lots</b><table><tr><th>Earned</th><th>Remaining</th><th>Earned at</th><th>Expires</th></tr>
+    ${r.lots.map(l => `<tr><td>${l.earned_amount}</td><td>${l.remaining}</td><td>${new Date(l.earned_at).toLocaleString()}</td><td>${new Date(l.expires_at).toLocaleDateString()}</td></tr>`).join("")}</table></div>`;
+}
+async function reverseEntry(entry, wallet) { const reason = askReason("reversal"); if (!reason) return; try { await post(`/admin/ledger/${entry}/reverse`, {reason}); openWallet(wallet); } catch (e) { alert(e.message); } }
+async function freeze(wallet, frozen) { const reason = askReason(frozen ? "freezing" : "unfreezing"); if (!reason) return; await post(`/admin/wallets/${wallet}/freeze`, {frozen, reason}); openWallet(wallet); }
+
+async function loadPending() {
+  const r = await api("/admin/pending");
+  $("pendingTable").innerHTML = "<tr><th>Wallet</th><th>Amount</th><th>Reason</th><th>Risk</th><th>Age (h)</th><th></th></tr>" + (r.pending.length ? r.pending.map(p =>
+    `<tr><td>${esc(p.wallet.label)}</td><td>+${p.amount}</td><td>${esc(p.text)}</td><td>${p.metadata.risk_score ?? ""}</td><td>${p.age_hours}</td>
+    <td class="row"><button class="btn" onclick="decide('${p.id}','release')">Release</button><button class="btn ghost" onclick="decide('${p.id}','reject')">Reject</button></td></tr>`).join("")
+    : '<tr><td colspan="6" class="muted">Queue is empty.</td></tr>');
+}
+async function decide(id, action) { const reason = askReason(action); if (!reason) return; try { await post(`/admin/pending/${id}/${action}`, {reason}); loadPending(); } catch (e) { alert(e.message); } }
+
+async function loadRedemptions() {
+  const r = await api("/admin/redemptions");
+  $("redTable").innerHTML = "<tr><th>When</th><th>User</th><th>Voucher</th><th>Coins</th><th>Status</th><th></th></tr>" + r.redemptions.map(x =>
+    `<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${esc(x.name)} ${esc(x.phone)}</td><td>${esc(x.brand)} INR ${x.face_value_inr}</td><td>${x.coins}</td>
+    <td>${x.status}${x.failure_code ? " · " + esc(x.failure_code) : ""}</td><td>${x.status === "HELD" ? `<button class="btn" onclick="releaseRed('${x.id}')">Release now</button>` : ""}</td></tr>`).join("");
+}
+async function releaseRed(id) { const reason = askReason("releasing this redemption"); if (!reason) return; try { await post(`/admin/redemptions/${id}/release`, {reason}); loadRedemptions(); } catch (e) { alert(e.message); } }
+
+let cfgCache = null;
+async function loadConfig() { const r = await api("/admin/config"); cfgCache = r; $("cfgVersion").textContent = "Version " + r.version + (r.body.kill_switch ? " · KILL SWITCH ON" : ""); $("cfgBody").value = JSON.stringify(r.body, null, 2); }
+async function publish(patch, reason) { try { const r = await post("/admin/config", {patch, reason}); $("cfgMsg").textContent = "Published v" + r.version; loadConfig(); } catch (e) { $("cfgMsg").innerHTML = `<span class="err">${esc(e.message)}</span>`; } }
+$("cfgSave").onclick = () => { let body; try { body = JSON.parse($("cfgBody").value); } catch { $("cfgMsg").innerHTML = '<span class="err">Invalid JSON</span>'; return; }
+  if ($("cfgReason").value.trim().length < 3) { $("cfgMsg").innerHTML = '<span class="err">Reason required</span>'; return; } publish(body, $("cfgReason").value.trim()); };
+$("killOn").onclick = () => { const r = askReason("turning the kill switch ON"); if (r) publish({kill_switch: true}, r); };
+$("killOff").onclick = () => { const r = askReason("turning the kill switch OFF"); if (r) publish({kill_switch: false}, r); };
+
+async function loadAudit() {
+  const r = await api("/admin/audit");
+  $("auditTable").innerHTML = "<tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Reason</th></tr>" + r.audit.map(a =>
+    `<tr><td>${new Date(a.created_at).toLocaleString()}</td><td>${esc(a.actor_name)}</td><td>${a.action}</td><td>${a.target_type} ${esc(a.target_id)}</td><td>${esc(a.reason)}</td></tr>`).join("");
+}
+
+const JOBS = ["close-weeks", "expire", "unverify", "digest", "nudges", "expiry-warn", "integrity", "release-redemptions"];
+async function loadSystem() {
+  const m = await api("/admin/metrics");
+  $("kpis").innerHTML = [["Coins issued today", m.coins_issued_today], ["Coins redeemed today", m.coins_redeemed_today], ["Pending entries", m.pending_entries],
+    ["Outbox backlog", m.outbox_pending], ["Deficit wallets", m.deficit_wallets]].map(([k, v]) => `<div class="kpi"><span class="muted">${k}</span><b>${v}</b></div>`).join("") +
+    `<div class="kpi" style="grid-column:1/-1"><span class="muted">Events today</span><div>${m.events_today.map(e => `<span class="tag">${e.name} ${e.c}</span>`).join(" ")}</div></div>`;
+  $("jobs").innerHTML = JOBS.map(j => `<button class="btn ghost" onclick="runJob('${j}')">${j}</button>`).join("");
+}
+async function runJob(j) { try { const body = j === "close-weeks" && $("weekStart").value ? {week_start: $("weekStart").value} : {}; const r = await post("/admin/jobs/" + j, body); $("jobOut").textContent = JSON.stringify(r, null, 2); } catch (e) { $("jobOut").textContent = e.message; } }
+$("armSave").onclick = async () => { try { await post(`/admin/groups/${$("armGroup").value}/arm`, {arm: $("armValue").value, reason: $("armReason").value}); alert("Saved"); } catch (e) { alert(e.message); } };
+
+boot();
+</script>
+</body>
+</html>

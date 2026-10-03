@@ -1,0 +1,8 @@
+.docker/
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+ios/build/
+ios/*.xcodeproj/xcuserdata/
+DerivedData/

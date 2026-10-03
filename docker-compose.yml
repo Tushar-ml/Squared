@@ -1,0 +1,46 @@
+# Local dev stack for Roommate Coins. Run with OrbStack:
+#   make up        (or: docker-compose up -d --build)
+name: roommate-coins
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: coins
+      POSTGRES_PASSWORD: coins
+      POSTGRES_DB: coins
+    ports: ["5433:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coins"]
+      interval: 2s
+      retries: 30
+
+  api:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+    env_file: backend/.env.dev
+    ports: ["8080:8080"]
+    volumes: ["./backend:/srv"]
+    depends_on:
+      db: { condition: service_healthy }
+
+  worker:
+    build: ./backend
+    command: python -m app.worker
+    env_file: backend/.env.dev
+    volumes: ["./backend:/srv"]
+    depends_on:
+      db: { condition: service_healthy }
+      api: { condition: service_started }
+
+  vendor:
+    build: ./vendor-mock
+    ports: ["8090:8090"]
+
+  mail:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025", "1025:1025"]
+
+volumes:
+  dbdata:
