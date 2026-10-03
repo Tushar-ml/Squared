@@ -155,6 +155,8 @@ struct CreateGroupSheet: View {
     @State private var type = "HOME"
     @State private var people = 3
     @State private var busy = false
+    @State private var currency = "INR"
+    @State private var showCurrency = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -167,14 +169,25 @@ struct CreateGroupSheet: View {
             if type == "HOME" {
                 Stepper("People living here: \(people)", value: $people, in: 2...8).font(Theme.body(15, .semibold))
             }
+            Button { showCurrency = true } label: {
+                HStack {
+                    Text("Group currency").font(Theme.body(15, .semibold))
+                    Spacer()
+                    Text(currency).font(Theme.body(15, .heavy))
+                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold))
+                }
+                .frame(minHeight: 44)
+            }
+            .foregroundStyle(Theme.text)
             NeoPopButton(title: "Create", enabled: !busy && !name.trimmingCharacters(in: .whitespaces).isEmpty) {
                 Task { await create() }
             }
             Spacer()
         }
         .padding(24)
-        .presentationDetents([.height(470)])
+        .presentationDetents([.height(520)])
         .presentationBackground(Theme.bg)
+        .sheet(isPresented: $showCurrency) { CurrencyPicker(selected: currency, reference: "INR") { currency = $0 } }
     }
 
     private func create() async {
@@ -182,7 +195,7 @@ struct CreateGroupSheet: View {
         defer { busy = false }
         do {
             let g: GroupSummary = try await APIClient.shared.request("POST", "/groups", body: [
-                "name": name, "group_type": type, "expected_members": type == "HOME" ? people : nil])
+                "name": name, "group_type": type, "expected_members": type == "HOME" ? people : nil, "currency": currency])
             dismiss()
             onCreated(g.id)
         } catch { state.showToast(error.localizedDescription) }

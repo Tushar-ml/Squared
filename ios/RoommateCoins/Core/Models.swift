@@ -21,6 +21,7 @@ struct GroupSummary: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
     let groupType: String
+    var currency: String? = "INR"
     let memberCount: Int
     let myNetPaise: Int
     let coinsEnabled: Bool
@@ -67,12 +68,25 @@ struct Split: Codable, Hashable { let userId: Int; let name: String?; let shareP
 
 struct SuccessHint: Codable, Hashable { let adderCoins: Int; let notified: [String?] }
 
+struct SplitMeta: Codable, Hashable {
+    var participants: [Int]?
+    var exact: [String: Int]?
+    var percents: [String: Double]?
+    var shares: [String: Double]?
+}
+
 struct Expense: Codable, Identifiable, Hashable {
     let id: Int
     let groupId: Int
     let description: String
     let amountPaise: Int
     let currency: String
+    var splitType: String? = "EQUAL"
+    var splitMeta: SplitMeta?
+    var category: String? = "other"
+    var originalCurrency: String?
+    var originalAmountMinor: Int?
+    var fxRate: Double?
     let paidBy: Int
     let paidByName: String?
     let createdBy: Int
@@ -112,6 +126,7 @@ struct GroupDetail: Codable {
     let id: Int
     let name: String
     let groupType: String
+    var currency: String? = "INR"
     let expectedMembers: Int?
     let arm: String?
     let coinsEnabled: Bool
@@ -313,4 +328,36 @@ struct Activation: Codable, Equatable {
     let coinsEnabled: Bool
     let firstWinCoins: Int?
     var doneCount: Int { steps.filter(\.done).count }
+}
+
+
+// MARK: - Currency, insights
+
+struct CurrencyInfo: Codable, Identifiable, Hashable { let code: String; let name: String; let symbol: String?; let digits: Int; var id: String { code } }
+struct CurrenciesResponse: Codable { let currencies: [CurrencyInfo] }
+struct FxRates: Codable { let base: String; let rates: [String: Double]; let asOf: String?; let source: String?; let stale: Bool }
+
+struct InsightMember: Codable, Identifiable, Hashable {
+    let userId: Int; let name: String?; let isYou: Bool; let paid: Int; let share: Int; let net: Int
+    let settled: Int; let expensesAdded: Int; let sharePct: Double
+    var id: Int { userId }
+}
+struct CategorySlice: Codable, Identifiable, Hashable { let category: String; let label: String; let amount: Int; let pct: Double; var id: String { category } }
+struct TrendPoint: Codable, Identifiable, Hashable { let month: String; let label: String; var total: Int? = nil; let myShare: Int; var id: String { month } }
+struct TopExpense: Codable, Identifiable, Hashable { let id: Int; let description: String; let amount: Int; let category: String; let paidByName: String?; let createdAt: String }
+
+struct GroupInsights: Codable {
+    let groupId: Int; let groupName: String; let currency: String; let month: String; let monthLabel: String
+    let totalSpend: Int; let expenseCount: Int; let dailyAverage: Int
+    let members: [InsightMember]; let categories: [CategorySlice]; let trend: [TrendPoint]; let topExpenses: [TopExpense]
+    let you: InsightMember?
+}
+
+struct GroupShare: Codable, Identifiable, Hashable {
+    let groupId: Int; let groupName: String; let groupCurrency: String; let share: Int; let shareInGroupCurrency: Int; let paid: Int
+    var id: Int { groupId }
+}
+struct MyInsights: Codable {
+    let currency: String; let month: String; let monthLabel: String; let totalShare: Int; let totalPaid: Int
+    let byGroup: [GroupShare]; let categories: [CategorySlice]; let trend: [TrendPoint]
 }

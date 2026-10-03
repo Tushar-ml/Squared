@@ -8,15 +8,19 @@
 
 /* Begin PBXBuildFile section */
 		151F4C7CB47D25AD79344D97 /* ConfirmComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */; };
+		15902C815EDC3316F672E33B /* CurrencyPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D6566ABC678DC14383D7F3 /* CurrencyPicker.swift */; };
 		16BB389118E6DD4BBFA4531F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0901B884E242C2DC7D38414 /* Models.swift */; };
 		1C60051D835B1BA2425E2722 /* ActivationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8648397496CB5056524A9557 /* ActivationViews.swift */; };
 		2CCAC1CF401DA3AB839C83E9 /* NeoPop in Frameworks */ = {isa = PBXBuildFile; productRef = 555F91191D0EA63A399E8641 /* NeoPop */; };
 		3025E10414C941C0093FF34D /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 472A66A13339B85F09997C49 /* OfflineQueue.swift */; };
 		5607CBB612656F3E259218BC /* InviteViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24A3A66DDDD0793EE1EB083F /* InviteViews.swift */; };
+		56C6480A0443FF170E50211E /* ExpenseForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CEDDF43DA1EF39C4D96DEC /* ExpenseForm.swift */; };
 		67DCEB7525DF8E7B4D7922C1 /* DebugAutomation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */; };
 		6C02D9D502FAD945A3798192 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A328EA2717E13E84605A1D0 /* AppState.swift */; };
 		755ADCB8676F30C324ACA7B0 /* Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B05DD6395D490E9BA03F4A3 /* Format.swift */; };
 		7CD0DA0126089C6A43BFA487 /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA61B4BEFA5DF20F2ED379F7 /* AuthViews.swift */; };
+		84A79692E56DBC72BB9E3B95 /* InsightsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B8CE559535E5B98371D9 /* InsightsViews.swift */; };
+		887D7061252213C0EC7E429D /* SplitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3B4D39134C844E6A09B803 /* SplitMath.swift */; };
 		9396CB8D9BBD599D6FAE6AB6 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */; };
 		9E1BB96AFE9CAE15CF0AAABD /* WalkthroughView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A1F8A3DF1D20FADFBDBA5E /* WalkthroughView.swift */; };
 		A5AC498F53767CFFE9568D37 /* FlatSetupFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14826075CD833E6A0B64FE91 /* FlatSetupFlow.swift */; };
@@ -52,6 +56,7 @@
 		1488A9FCE6A8ADF6AC730076 /* RoommateCoins.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RoommateCoins.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19A1F8A3DF1D20FADFBDBA5E /* WalkthroughView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkthroughView.swift; sourceTree = "<group>"; };
 		24A3A66DDDD0793EE1EB083F /* InviteViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteViews.swift; sourceTree = "<group>"; };
+		2B3B4D39134C844E6A09B803 /* SplitMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitMath.swift; sourceTree = "<group>"; };
 		3275C0EAE8C8318CCED68D48 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		368B6F4BFF16C2965171304E /* RoommateCoinsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoommateCoinsApp.swift; sourceTree = "<group>"; };
 		38E3233562BA1DCDBD0B8246 /* ExpenseViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseViews.swift; sourceTree = "<group>"; };
@@ -64,13 +69,16 @@
 		7E2FDC785AA6AFE3B25E1166 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8648397496CB5056524A9557 /* ActivationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationViews.swift; sourceTree = "<group>"; };
 		8A328EA2717E13E84605A1D0 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		8FF3B8CE559535E5B98371D9 /* InsightsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsViews.swift; sourceTree = "<group>"; };
 		A027AA040FA7DCD89F605F7E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B0901B884E242C2DC7D38414 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		B21B65D79262DC1F5FC05480 /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
 		B3D96BDE36DEE1D8D6CFF66C /* SettingsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViews.swift; sourceTree = "<group>"; };
+		B7D6566ABC678DC14383D7F3 /* CurrencyPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyPicker.swift; sourceTree = "<group>"; };
 		B96E6AF0B4F8DCCB5CA40BD6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		C407FEF1409959159EDB735F /* GroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupView.swift; sourceTree = "<group>"; };
 		D049AE0A3017E464DFD0D6F5 /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
+		D4CEDDF43DA1EF39C4D96DEC /* ExpenseForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseForm.swift; sourceTree = "<group>"; };
 		D9BEA1B055C97276EFB5DB6C /* NeoPopComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeoPopComponents.swift; sourceTree = "<group>"; };
 		E6ABA9BC8BFF7D08444B7144 /* DebugAutomation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugAutomation.swift; sourceTree = "<group>"; };
 		EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
@@ -104,6 +112,14 @@
 				3275C0EAE8C8318CCED68D48 /* HomeView.swift */,
 			);
 			path = Home;
+			sourceTree = "<group>";
+		};
+		115ECA4DBEEA8FC5563759F3 /* Insights */ = {
+			isa = PBXGroup;
+			children = (
+				8FF3B8CE559535E5B98371D9 /* InsightsViews.swift */,
+			);
+			path = Insights;
 			sourceTree = "<group>";
 		};
 		1E90287753273A8B1DE1D82D /* Products */ = {
@@ -165,6 +181,8 @@
 			isa = PBXGroup;
 			children = (
 				073E31BE6C707A04F4C2E268 /* ConfirmComponents.swift */,
+				B7D6566ABC678DC14383D7F3 /* CurrencyPicker.swift */,
+				D4CEDDF43DA1EF39C4D96DEC /* ExpenseForm.swift */,
 				38E3233562BA1DCDBD0B8246 /* ExpenseViews.swift */,
 			);
 			path = Expense;
@@ -240,6 +258,7 @@
 				B0901B884E242C2DC7D38414 /* Models.swift */,
 				EB3844D627F1965DB6E2DCAC /* NotificationManager.swift */,
 				472A66A13339B85F09997C49 /* OfflineQueue.swift */,
+				2B3B4D39134C844E6A09B803 /* SplitMath.swift */,
 				B21B65D79262DC1F5FC05480 /* Strings.swift */,
 			);
 			path = Core;
@@ -253,6 +272,7 @@
 				6D2B2AD80542051E39534BCA /* Expense */,
 				219C65CD16A76B33393A7821 /* Group */,
 				0D35C303FF5649D5035F54EC /* Home */,
+				115ECA4DBEEA8FC5563759F3 /* Insights */,
 				C6DFAEBC7C6C14C6D7D99D14 /* Invite */,
 				AC39D447B34C3D73F96D9190 /* Onboarding */,
 				0481106390F0797C3B8CBD47 /* Settings */,
@@ -366,12 +386,15 @@
 				7CD0DA0126089C6A43BFA487 /* AuthViews.swift in Sources */,
 				CE74FEC8A2760069D6BA2DBD /* CelebrationView.swift in Sources */,
 				151F4C7CB47D25AD79344D97 /* ConfirmComponents.swift in Sources */,
+				15902C815EDC3316F672E33B /* CurrencyPicker.swift in Sources */,
 				67DCEB7525DF8E7B4D7922C1 /* DebugAutomation.swift in Sources */,
+				56C6480A0443FF170E50211E /* ExpenseForm.swift in Sources */,
 				DE680522FCBB849010C247B4 /* ExpenseViews.swift in Sources */,
 				A5AC498F53767CFFE9568D37 /* FlatSetupFlow.swift in Sources */,
 				755ADCB8676F30C324ACA7B0 /* Format.swift in Sources */,
 				D91A8869C6C4A566D68C5FC9 /* GroupView.swift in Sources */,
 				F02105D94BE3B21B49D7E16D /* HomeView.swift in Sources */,
+				84A79692E56DBC72BB9E3B95 /* InsightsViews.swift in Sources */,
 				5607CBB612656F3E259218BC /* InviteViews.swift in Sources */,
 				16BB389118E6DD4BBFA4531F /* Models.swift in Sources */,
 				AAE1319F93E6A7797AEC6E2B /* NeoPopComponents.swift in Sources */,
@@ -380,6 +403,7 @@
 				BB5DE30D78AE9F514476B76C /* RoommateCoinsApp.swift in Sources */,
 				B75EF7CE0FCB8E4F97D5771E /* SettingsViews.swift in Sources */,
 				E2C1DCA6CE4D47B1058CDC99 /* SettleView.swift in Sources */,
+				887D7061252213C0EC7E429D /* SplitMath.swift in Sources */,
 				D448B38A8E5E16B5BE742A74 /* Strings.swift in Sources */,
 				E38C164E7FA8CD11673247A9 /* Theme.swift in Sources */,
 				9E1BB96AFE9CAE15CF0AAABD /* WalkthroughView.swift in Sources */,

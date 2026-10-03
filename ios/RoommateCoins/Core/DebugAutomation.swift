@@ -47,6 +47,8 @@ enum DebugAutomation {
         case "expense": state.open(.expense(id))
         case "settle": state.open(.settle(id))
         case "home": state.path = []
+        case "mySpending": state.open(.mySpending)
+        case "insights": state.open(.insights(id))
         default: return false
         }
         return true

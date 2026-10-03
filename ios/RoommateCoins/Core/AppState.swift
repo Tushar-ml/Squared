@@ -10,6 +10,8 @@ enum Route: Hashable {
     case redeem
     case household(Int)
     case settle(Int)
+    case insights(Int)
+    case mySpending
 }
 
 @MainActor

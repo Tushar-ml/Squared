@@ -67,7 +67,7 @@ struct GroupView: View {
         .task { await load() }
         .onChange(of: state.refreshTick) { Task { await load() } }
         .sheet(isPresented: $showAdd) {
-            if let d = detail { AddExpenseView(group: d) { Task { await load() } } }
+            if let d = detail { ExpenseForm(group: d) { Task { await load() } } }
         }
         .sheet(isPresented: $showInvite) {
             if let d = detail { InviteSheet(groupId: d.id, groupName: d.name, coinsEnabled: d.coinsEnabled) }
@@ -82,8 +82,14 @@ struct GroupView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(d.name).font(Theme.title(30))
             HStack(spacing: 10) {
-                BalanceText(net: d.myNetPaise)
+                BalanceText(net: d.myNetPaise, currency: d.currency)
                 Spacer()
+                NavigationLink(value: Route.insights(d.id)) {
+                    Image(systemName: "chart.bar.xaxis").font(.system(size: 16, weight: .bold)).frame(width: 44, height: 38)
+                        .overlay(Rectangle().stroke(Theme.text))
+                }
+                .foregroundStyle(Theme.text)
+                .accessibilityLabel("Spending insights")
                 NeoPopButton(title: "Invite", style: .stroke, icon: "person.badge.plus", height: 38) { showInvite = true }
                     .frame(width: 120)
             }
@@ -99,7 +105,7 @@ struct GroupView: View {
                 SectionLabel("Settle up")
                 ForEach(mine, id: \.self) { debt in
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(Strings.youOwe(debt.creditorName ?? "", Format.inr(paise: debt.amountPaise))).font(Theme.body(17, .bold))
+                        Text(Strings.youOwe(debt.creditorName ?? "", Format.money(debt.amountPaise, d.currency))).font(Theme.body(17, .bold))
                         if d.coinsEnabled, let hint = debt.payRewardHint {
                             HStack(spacing: 6) { CoinGlyph(size: 14); Text(Strings.payToday(hint)).font(Theme.body(13, .semibold)) }
                                 .foregroundStyle(Theme.coin)
@@ -117,7 +123,7 @@ struct GroupView: View {
                     HStack {
                         Text("\(debt.debtorName ?? "") owes you").font(Theme.body(14)).foregroundStyle(Theme.muted)
                         Spacer()
-                        Text(Format.inr(paise: debt.amountPaise)).font(Theme.body(14, .bold)).foregroundStyle(Theme.owed)
+                        Text(Format.money(debt.amountPaise, d.currency)).font(Theme.body(14, .bold)).foregroundStyle(Theme.owed)
                     }
                 }
             }
@@ -138,7 +144,7 @@ struct GroupView: View {
                         ExpenseRow(expense: e, me: state.user?.id ?? 0)
                     }.buttonStyle(.plain)
                 case .payment(let p):
-                    PaymentRow(payment: p, me: state.user?.id ?? 0) { Task { await load() } }
+                    PaymentRow(payment: p, me: state.user?.id ?? 0, currency: d.currency) { Task { await load() } }
                 }
             }
         }
@@ -299,9 +305,11 @@ struct ExpenseRow: View {
             HStack {
                 Text(expense.description).font(Theme.body(16, .bold))
                 Spacer()
-                Text(Format.inr(paise: expense.amountPaise)).font(Theme.body(16, .heavy))
+                Text(Format.money(expense.amountPaise, expense.currency)).font(Theme.body(16, .heavy))
             }
-            Text("\(expense.paidBy == me ? "You" : (expense.paidByName ?? "")) paid, your share \(Format.inr(paise: expense.mySharePaise))")
+            Text("\(expense.paidBy == me ? "You" : (expense.paidByName ?? "")) paid, your share \(Format.money(expense.mySharePaise, expense.currency))"
+                 + (expense.originalCurrency.map { " · in \($0)" } ?? "")
+                 + ((expense.splitType ?? "EQUAL") != "EQUAL" ? " · custom split" : ""))
                 .font(Theme.body(13)).foregroundStyle(Theme.muted)
             if let c = expense.confirmation {
                 HStack(spacing: 8) {
@@ -329,6 +337,7 @@ struct ExpenseRow: View {
 struct PaymentRow: View {
     let payment: Payment
     let me: Int
+    var currency: String? = "INR"
     let onChange: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -337,7 +346,7 @@ struct PaymentRow: View {
                 Text("\(payment.payerId == me ? "You" : payment.payerName ?? "") paid \(payment.receiverId == me ? "you" : payment.receiverName ?? "")")
                     .font(Theme.body(15, .semibold))
                 Spacer()
-                Text(Format.inr(paise: payment.amountPaise)).font(Theme.body(15, .heavy))
+                Text(Format.money(payment.amountPaise, currency)).font(Theme.body(15, .heavy))
             }
             if let c = payment.confirmation {
                 switch c.status {

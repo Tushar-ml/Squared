@@ -48,6 +48,8 @@ struct HomeView: View {
                 case .redeem: RedeemView(groupId: nil)
                 case .household(let id): GroupView(groupId: id)
                 case .settle(let id): SettleView(groupId: id, creditorId: nil, showsClose: false)
+                case .insights(let id): GroupInsightsView(groupId: id)
+                case .mySpending: MyInsightsView()
                 }
             }
             .overlay(alignment: .bottom) {
@@ -114,6 +116,22 @@ struct HomeView: View {
             ForEach(groups) { g in
                 Button { state.open(.group(g.id)) } label: { GroupRow(group: g) }.buttonStyle(.plain)
             }
+            if !groups.isEmpty {
+                Button { state.open(.mySpending) } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "chart.pie.fill").font(.system(size: 17, weight: .bold)).frame(width: 44, height: 44)
+                            .background(Theme.surfaceHigh)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("My spending").font(Theme.body(16, .bold))
+                            Text("Your share across flats, by category and month").font(Theme.body(12)).foregroundStyle(Theme.muted)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.muted)
+                    }
+                    .padding(14).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
@@ -153,7 +171,7 @@ struct GroupRow: View {
                 Text("\(group.memberCount) member\(group.memberCount == 1 ? "" : "s")").font(Theme.body(12)).foregroundStyle(Theme.muted)
             }
             Spacer()
-            BalanceText(net: group.myNetPaise)
+            BalanceText(net: group.myNetPaise, currency: group.currency)
         }
         .neoPopCard(depth: 4, padding: 14)
         .accessibilityElement(children: .combine)
@@ -162,13 +180,14 @@ struct GroupRow: View {
 
 struct BalanceText: View {
     let net: Int
+    var currency: String? = "INR"
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
             if net == 0 {
                 Text("balanced").font(Theme.body(13, .semibold)).foregroundStyle(Theme.muted)
             } else {
                 Text(net > 0 ? "you are owed" : "you owe").font(Theme.body(11)).foregroundStyle(Theme.muted)
-                Text(Format.inr(paise: abs(net))).font(Theme.body(15, .heavy)).foregroundStyle(net > 0 ? Theme.owed : Theme.owe)
+                Text(Format.money(abs(net), currency)).font(Theme.body(15, .heavy)).foregroundStyle(net > 0 ? Theme.owed : Theme.owe)
             }
         }
     }
@@ -208,7 +227,7 @@ struct NeedsYouExpenseRow: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(expense.createdByName ?? "A roommate") added \(expense.description)").font(Theme.body(15, .bold))
-                    Text("\(Format.inr(paise: expense.amountPaise)) · your share \(Format.inr(paise: expense.mySharePaise)) · \(groupName)")
+                    Text("\(Format.money(expense.amountPaise, expense.currency)) · your share \(Format.money(expense.mySharePaise, expense.currency)) · \(groupName)")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
                 }
                 Spacer()

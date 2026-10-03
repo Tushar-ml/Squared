@@ -53,3 +53,35 @@ final class ConfigDecodeTests: XCTestCase {
         XCTAssertEqual(c.earn.householdGoal, 120)
     }
 }
+
+final class SplitMathTests: XCTestCase {
+    func testAllocateMatchesServerRounding() {
+        XCTAssertEqual(SplitMath.allocate(10000, [1, 1, 1]), [3334, 3333, 3333])
+        XCTAssertEqual(SplitMath.allocate(120000, [2, 1, 1]), [60000, 30000, 30000])
+        for total in [1, 7, 99, 100, 101, 123457] {
+            XCTAssertEqual(SplitMath.allocate(total, [33.33, 33.33, 33.34]).reduce(0, +), total)
+        }
+    }
+
+    func testModes() {
+        let people = [1, 2, 3]
+        let eq = SplitMath.compute(total: 79900, mode: .equal, people: people, included: [2, 3], values: [:])
+        XCTAssertEqual(eq.shares, [2: 39950, 3: 39950])
+        let ex = SplitMath.compute(total: 1000, mode: .exact, people: people, included: [], values: [1: 600, 2: 300])
+        XCTAssertEqual(ex.remaining, 100)
+        XCTAssertNotNil(ex.error)
+        let pc = SplitMath.compute(total: 100000, mode: .percent, people: people, included: [], values: [1: 50, 2: 30, 3: 20])
+        XCTAssertNil(pc.error)
+        XCTAssertEqual(pc.shares[1], 50000)
+        let bad = SplitMath.compute(total: 1000, mode: .percent, people: people, included: [], values: [1: 60, 2: 30])
+        XCTAssertEqual(bad.error, "Percentages add up to 90%")
+    }
+
+    func testMoneyFormatting() {
+        XCTAssertEqual(Format.money(96320, "INR"), "INR 963.20")
+        XCTAssertEqual(Format.money(1505, "JPY"), "JPY 1,505")
+        XCTAssertEqual(Format.money(250000, "USD"), "USD 2,500")
+        XCTAssertEqual(Format.minor(from: "10.01", currency: "USD"), 1001)
+        XCTAssertEqual(Format.minor(from: "1000", currency: "JPY"), 1000)
+    }
+}
