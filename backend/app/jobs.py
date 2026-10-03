@@ -86,8 +86,10 @@ def daily_digest() -> int:
                  AND w.owner_type='USER' GROUP BY w.owner_id""", (start, end)).fetchall()
         for r in rows:
             n = r["n"]
-            notify.enqueue(conn, cfg, user_id=r["uid"], nid="N3", title="Coins today",
-                           body=f"{n} of your expense{'s were' if n != 1 else ' was'} confirmed today. +{r['coins']} coins",
+            from . import i18n
+            loc = i18n.locale_of(conn, r["uid"])
+            notify.enqueue(conn, cfg, user_id=r["uid"], nid="N3", title=i18n.t(loc, "n3_title"),
+                           body=i18n.t(loc, "n3_body", n=n, coins=r["coins"]),
                            dedupe_key=f"N3:{r['uid']}:{clock.ist().date()}", payload={"route": "wallet"})
         return len(rows)
 
@@ -117,8 +119,11 @@ def settle_nudges() -> int:
                 bucket = int(age.total_seconds() // (p["settle_nudge_every_days"] * 86400))
                 names = names or domain.user_names(conn, experiment.active_member_ids(conn, gid))
                 coins = views.settle_hint(conn, gid, a, b, cfg)
-                if notify.enqueue(conn, cfg, user_id=a, nid="N4", group_id=gid, title="Settle up",
-                                  body=f"You owe {names.get(b)} {domain.inr(v)}. Pay today for +{coins} coins",
+                from . import fx, i18n
+                loc = i18n.locale_of(conn, a)
+                cur = conn.execute("SELECT currency FROM groups WHERE id=%s", (gid,)).fetchone()["currency"]
+                if notify.enqueue(conn, cfg, user_id=a, nid="N4", group_id=gid, title=i18n.t(loc, "n4_title"),
+                                  body=i18n.t(loc, "n4_body", name=names.get(b), amount=fx.fmt(v, cur), coins=coins),
                                   dedupe_key=f"N4:{gid}:{a}:{b}:{start.date()}:{bucket}",
                                   payload={"group_id": gid, "creditor_id": b, "route": "settle"}):
                     n += 1
@@ -134,8 +139,10 @@ def expiry_warnings() -> int:
                WHERE w.owner_type='USER' AND l.remaining > 0 AND l.expires_at <= %s AND l.expires_at > %s
                GROUP BY w.owner_id""", (clock.now() + timedelta(days=cfg["expiry_push_days"]), clock.now())).fetchall()
         for r in rows:
-            notify.enqueue(conn, cfg, user_id=r["uid"], nid="N7", title="Coins expiring",
-                           body=f"{r['coins']} coins expire on {clock.ist(r['t']).strftime('%-d %b')}",
+            from . import i18n
+            loc = i18n.locale_of(conn, r["uid"])
+            notify.enqueue(conn, cfg, user_id=r["uid"], nid="N7", title=i18n.t(loc, "n7_title"),
+                           body=i18n.t(loc, "n7_body", coins=r["coins"], date=clock.ist(r["t"]).strftime("%-d %b")),
                            dedupe_key=f"N7:{r['uid']}:{clock.ist().strftime('%Y-%m')}", payload={"route": "wallet"})
         return len(rows)
 
@@ -179,7 +186,8 @@ class Scheduler:
         if self.due("minute", t.strftime("%Y%m%d%H%M")):
             runs += [mark_unverified, release_redemptions]
         if self.due("hourly", t.strftime("%Y%m%d%H")):
-            runs += [integrity_check, settle_nudges]
+            from . import api_features
+            runs += [integrity_check, settle_nudges, api_features.run_recurring, api_features.check_all_budgets]
         if t.weekday() == 0 and (t.hour, t.minute) >= (0, 5) and self.due("week_close", t.strftime("%G%V")):
             runs.append(close_weeks)
         if t.hour >= 2 and self.due("nightly", t.strftime("%Y%m%d")):

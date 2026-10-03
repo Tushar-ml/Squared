@@ -568,7 +568,8 @@ def get_prefs(user=Depends(current_user)):
             "SELECT * FROM notification_prefs WHERE user_id=%s", (user["id"],))}
     labels = {"N1": "Expenses to confirm", "N2": "Payments to confirm", "N3": "Daily coin digest",
               "N4": "Settle-up nudges", "N5": "Monday household recap", "N6": "Redeem reminders",
-              "N7": "Expiring coins", "N8": "Roommate joined"}
+              "N7": "Expiring coins", "N8": "Roommate joined", "C1": "Recurring bills", "C2": "Comments",
+              "C3": "Flat chat", "C4": "Budget alerts"}
     return {"prefs": [{"id": k, "label": v, "enabled": rows.get(k, True)} for k, v in labels.items()],
             "hide_coins": user["hide_coins"]}
 

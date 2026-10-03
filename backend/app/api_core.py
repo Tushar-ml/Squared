@@ -51,7 +51,9 @@ def otp_request(body: OtpRequest):
         conn.execute("""INSERT INTO otp_codes (phone, code, expires_at) VALUES (%s,%s,%s)
                         ON CONFLICT (phone) DO UPDATE SET code=EXCLUDED.code, expires_at=EXCLUDED.expires_at""",
                      (phone, code, clock.now() + timedelta(minutes=10)))
-    log.info("OTP issued for %s", phone[-4:])  # an SMS provider would deliver it in production
+    from . import sms
+    if not (settings.is_dev and settings.dev_otp):
+        sms.send_otp(phone, code)
     out = {"phone": phone, "sent": True}
     if settings.is_dev:
         out["dev_hint"] = "Local dev: use the DEV_OTP from backend/.env.dev"
@@ -84,7 +86,7 @@ def otp_verify(body: OtpVerify):
 
 def user_json(u: dict) -> dict:
     return {"id": u["id"], "phone": u["phone"], "name": u["name"], "email": u["email"], "upi_id": u["upi_id"],
-            "role": u["role"], "hide_coins": u["hide_coins"], "intro_seen": u["intro_seen"],
+            "role": u["role"], "hide_coins": u["hide_coins"], "intro_seen": u["intro_seen"], "locale": u["locale"],
             "created_at": u["created_at"].isoformat()}
 
 
@@ -101,6 +103,7 @@ class MePatch(BaseModel):
     upi_id: str | None = Field(default=None, max_length=80)
     hide_coins: bool | None = None
     intro_seen: bool | None = None
+    locale: str | None = Field(default=None, pattern="^(en|hi)$")
 
 
 @router.get("/me")
@@ -186,7 +189,7 @@ def group_detail(group_id: int, user=Depends(current_user)):
         for p in pays:
             ids |= {p["payer_id"], p["receiver_id"]}
         names = domain.user_names(conn, ids)
-        debts = domain.pair_debts(conn, group_id)
+        debts = domain.group_debts(conn, g)
         my_debts = []
         for (a, b), v in sorted(debts.items(), key=lambda kv: -kv[1]):
             if user["id"] not in (a, b):
@@ -201,7 +204,8 @@ def group_detail(group_id: int, user=Depends(current_user)):
             my_debts.append(item)
         return {
             "id": g["id"], "name": g["name"], "group_type": g["group_type"], "expected_members": g["expected_members"],
-            "currency": g["currency"],
+            "currency": g["currency"], "simplify_debts": g["simplify_debts"], "default_split": g["default_split"],
+            "created_by": g["created_by"],
             "arm": views.safe(conn, experiment.arm_of, conn, group_id, cfg),
             "coins_enabled": eligible,
             "members": [{"id": m["id"], "name": names.get(m["id"]), "is_you": m["id"] == user["id"]} for m in members],
@@ -216,7 +220,10 @@ def group_detail(group_id: int, user=Depends(current_user)):
 @router.post("/groups/{group_id}/leave")
 def leave_group(group_id: int, user=Depends(current_user)):
     with db.tx() as conn:
-        require_member(conn, group_id, user["id"])
+        g = require_member(conn, group_id, user["id"])
+        net = domain.user_net(conn, group_id).get(user["id"], 0)
+        if net != 0:
+            raise HTTPException(409, f"You have an open balance of {fx.fmt(abs(net), g['currency'])}. Settle up first.")
         conn.execute("UPDATE group_members SET left_at=%s WHERE group_id=%s AND user_id=%s",
                      (clock.now(), group_id, user["id"]))
         events.emit(conn, "MemberLeft", group_id=group_id, user_id=user["id"])
@@ -293,30 +300,41 @@ def _write_splits(conn, expense_id, shares):
         conn.execute("INSERT INTO expense_splits (expense_id, user_id, share_paise) VALUES (%s,%s,%s)", (expense_id, u, v))
 
 
+def create_expense(conn, g: dict, actor_id: int, body: "ExpenseIn", recurring_id=None) -> dict:
+    """Shared by the API and recurring bills, so both go through identical validation and events."""
+    members = set(experiment.active_member_ids(conn, g["id"]))
+    paid_by = body.paid_by or actor_id
+    if paid_by not in members:
+        raise HTTPException(400, "Payer must be in the group")
+    split_type, shares_orig, meta = _resolve_split(body, body.amount_paise, members)
+    amount_g, ocur, ominor, rate = _money(conn, g, body.amount_paise, body.currency)
+    shares = splits.reallocate(amount_g, shares_orig) if ocur else shares_orig
+    now = clock.now()
+    e = conn.execute(
+        """INSERT INTO expenses (group_id, description, amount_paise, currency, paid_by, created_by, created_at,
+               updated_at, split_type, split_meta, category, original_currency, original_amount_minor, fx_rate, recurring_id)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+        (g["id"], body.description.strip(), amount_g, g["currency"], paid_by, actor_id, now, now, split_type,
+         json.dumps(meta), categories.normalize(body.category, body.description), ocur, ominor, rate,
+         recurring_id)).fetchone()
+    _write_splits(conn, e["id"], shares)
+    events.emit(conn, "ExpenseCreated", expense_id=e["id"], group_id=g["id"], version=1, user_id=actor_id)
+    if conn.execute("SELECT 1 FROM group_budgets WHERE group_id=%s AND category=%s", (g["id"], e["category"])).fetchone():
+        from .api_features import check_budgets
+        views.safe(conn, check_budgets, conn, g["id"])
+    return e
+
+
 @router.post("/groups/{group_id}/expenses")
 def add_expense(group_id: int, body: ExpenseIn, user=Depends(current_user)):
     with db.tx() as conn:
         g = require_member(conn, group_id, user["id"])
-        members = set(experiment.active_member_ids(conn, group_id))
-        paid_by = body.paid_by or user["id"]
-        if paid_by not in members:
-            raise HTTPException(400, "Payer must be in the group")
-        split_type, shares_orig, meta = _resolve_split(body, body.amount_paise, members)
-        amount_g, ocur, ominor, rate = _money(conn, g, body.amount_paise, body.currency)
-        shares = splits.reallocate(amount_g, shares_orig) if ocur else shares_orig
-        now = clock.now()
-        e = conn.execute(
-            """INSERT INTO expenses (group_id, description, amount_paise, currency, paid_by, created_by, created_at,
-                   updated_at, split_type, split_meta, category, original_currency, original_amount_minor, fx_rate)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
-            (group_id, body.description.strip(), amount_g, g["currency"], paid_by, user["id"], now, now, split_type,
-             json.dumps(meta), categories.normalize(body.category, body.description), ocur, ominor, rate)).fetchone()
-        _write_splits(conn, e["id"], shares)
-        events.emit(conn, "ExpenseCreated", expense_id=e["id"], group_id=group_id, version=1, user_id=user["id"])
+        e = create_expense(conn, g, user["id"], body)
         e = domain.load_expense(conn, e["id"])
+        members = set(experiment.active_member_ids(conn, group_id))
         cfg = coin_config.current(conn)
         eligible = views.eligible(conn, group_id, cfg) and not user["hide_coins"]
-        names = domain.user_names(conn, members)
+        names = domain.user_names(conn, members | {s["user_id"] for s in e["splits"]})
         out = views.expense_json(conn, user["id"], e, names, cfg, eligible)
         if eligible:  # S3 success sheet
             others = sorted(domain.participants(e) - {user["id"]})

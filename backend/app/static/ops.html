@@ -38,6 +38,7 @@
   <nav id="nav" class="hidden">
     <button data-tab="wallets" class="on">Wallets</button>
     <button data-tab="pending">Pending</button>
+    <button data-tab="rings">Rings</button>
     <button data-tab="redemptions">Redemptions</button>
     <button data-tab="config">Config</button>
     <button data-tab="audit">Audit</button>
@@ -67,6 +68,15 @@
   </section>
 
   <section id="tab-pending" class="tab hidden"><div class="panel"><table id="pendingTable"></table></div></section>
+  <section id="tab-rings" class="tab hidden">
+    <div class="panel row">
+      <span class="muted">Pairs who keep confirming each other's expenses in the last</span>
+      <select id="ringDays"><option>7</option><option>14</option><option>30</option></select><span class="muted">days, at least</span>
+      <input id="ringMin" value="6" size="3"><span class="muted">confirmations</span>
+      <button class="btn ghost" onclick="loadRings()">Refresh</button>
+    </div>
+    <div class="panel"><table id="ringTable"></table></div>
+  </section>
   <section id="tab-redemptions" class="tab hidden"><div class="panel"><table id="redTable"></table></div></section>
 
   <section id="tab-config" class="tab hidden">
@@ -136,7 +146,7 @@ function show(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
   document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
   $("tab-" + tab).classList.remove("hidden");
-  ({pending: loadPending, redemptions: loadRedemptions, config: loadConfig, audit: loadAudit, system: loadSystem})[tab]?.();
+  ({rings: loadRings, pending: loadPending, redemptions: loadRedemptions, config: loadConfig, audit: loadAudit, system: loadSystem})[tab]?.();
 }
 document.querySelectorAll("#nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
 
@@ -182,6 +192,21 @@ async function loadPending() {
 }
 async function decide(id, action) { const reason = askReason(action); if (!reason) return; try { await post(`/admin/pending/${id}/${action}`, {reason}); loadPending(); } catch (e) { alert(e.message); } }
 
+let ringCache = [];
+async function loadRings() {
+  const r = await api(`/admin/rings?days=${$("ringDays").value}&min_confirmations=${$("ringMin").value || 6}`);
+  ringCache = r.pairs;
+  $("ringTable").innerHTML = "<tr><th>Pair</th><th>Confirmations</th><th>Volume</th><th>Coins between</th><th>Flags</th><th></th></tr>" +
+    (r.pairs.length ? r.pairs.map((p, i) => `<tr><td>${p.users.map(u => esc(u.name) + " " + esc(u.phone)).join("<br>")}</td><td>${p.confirmations}</td>
+    <td>${(p.volume / 100).toFixed(2)}</td><td>${p.coins_between}</td><td><span class="tag">${p.risk}</span> ${p.flags.map(esc).join(", ")}</td>
+    <td>${p.entry_ids.length ? `<button class="btn amber" onclick="reverseRing(${i})">Reverse ${p.entry_ids.length} entries</button>` : '<span class="muted">nothing to reverse</span>'}</td></tr>`).join("")
+    : '<tr><td colspan="6" class="muted">No suspicious pairs.</td></tr>');
+}
+async function reverseRing(i) {
+  const p = ringCache[i]; const reason = askReason(`reversing ${p.entry_ids.length} entries for this pair`); if (!reason) return;
+  try { const r = await post("/admin/ledger/bulk-reverse", {entry_ids: p.entry_ids, reason}); alert(`Reversed ${r.reversed}`); loadRings(); } catch (e) { alert(e.message); }
+}
+
 async function loadRedemptions() {
   const r = await api("/admin/redemptions");
   $("redTable").innerHTML = "<tr><th>When</th><th>User</th><th>Voucher</th><th>Coins</th><th>Status</th><th></th></tr>" + r.redemptions.map(x =>
@@ -204,7 +229,7 @@ async function loadAudit() {
     `<tr><td>${new Date(a.created_at).toLocaleString()}</td><td>${esc(a.actor_name)}</td><td>${a.action}</td><td>${a.target_type} ${esc(a.target_id)}</td><td>${esc(a.reason)}</td></tr>`).join("");
 }
 
-const JOBS = ["close-weeks", "expire", "unverify", "digest", "nudges", "expiry-warn", "integrity", "release-redemptions"];
+const JOBS = ["recurring", "close-weeks", "expire", "unverify", "digest", "nudges", "expiry-warn", "integrity", "release-redemptions"];
 async function loadSystem() {
   const m = await api("/admin/metrics");
   $("kpis").innerHTML = [["Coins issued today", m.coins_issued_today], ["Coins redeemed today", m.coins_redeemed_today], ["Pending entries", m.pending_entries],

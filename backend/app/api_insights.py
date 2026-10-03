@@ -201,8 +201,10 @@ def _major(minor: int, cur: str) -> str:
 
 
 @router.get("/groups/{group_id}/report")
-def report(group_id: int, month: str | None = None, user=Depends(current_user)):
-    """Monthly statement as CSV: every expense with each member's share, payments, and a summary."""
+def report(group_id: int, month: str | None = None, format: str = "csv", user=Depends(current_user)):
+    """Monthly statement as CSV or PDF: every expense with each member's share, payments, and a summary."""
+    if format == "pdf":
+        return _pdf_report(group_id, month, user)
     with db.tx() as conn:
         g = require_member(conn, group_id, user["id"])
         cur = g["currency"]
@@ -248,3 +250,63 @@ def report(group_id: int, month: str | None = None, user=Depends(current_user)):
         fname = f"{g['name'].replace(' ', '_')}_{ins['month']}.csv"
         return Response(content=buf.getvalue(), media_type="text/csv",
                         headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+def _pdf_report(group_id: int, month: str | None, user) -> Response:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    with db.tx() as conn:
+        g = require_member(conn, group_id, user["id"])
+        cur = g["currency"]
+        first, start, end = _month_bounds(month)
+        ins = group_insights(conn, g, user["id"], month)
+        exps = _month_expenses(conn, group_id, start, end)
+        member_ids = [m["user_id"] for m in ins["members"]]
+        names = {m["user_id"]: m["name"] for m in ins["members"]}
+        pays = conn.execute(
+            """SELECT p.*, pc.status FROM payments p LEFT JOIN payment_confirmations pc ON pc.payment_id=p.id
+               WHERE p.group_id=%s AND p.deleted_at IS NULL AND p.created_at >= %s AND p.created_at < %s ORDER BY p.created_at""",
+            (group_id, start, end)).fetchall()
+        debts = [(domain.user_names(conn, [a]).get(a), domain.user_names(conn, [b]).get(b), v)
+                 for (a, b), v in domain.group_debts(conn, g).items()]
+
+    def money(v):  # plain text: PDF base fonts lack the rupee glyph
+        return fx.fmt(v, cur)
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=14 * mm, rightMargin=14 * mm,
+                            topMargin=14 * mm, bottomMargin=14 * mm, title=f"{g['name']} {ins['month_label']}")
+    st = getSampleStyleSheet()
+    grid = TableStyle([("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+                       ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
+                       ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#BBBBBB")),
+                       ("ALIGN", (3, 1), (-1, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "TOP")])
+    story = [Paragraph(f"<b>{g['name']}</b> statement · {ins['month_label']}", st["Title"]),
+             Paragraph(f"Total spent {money(ins['total_spend'])} across {ins['expense_count']} expenses. "
+                       f"Amounts in {cur}.", st["Normal"]), Spacer(1, 6 * mm)]
+    rows = [["Date", "Description", "Paid by", "Amount"] + [names[u] for u in member_ids]]
+    for e in exps:
+        shares = {s["user_id"]: s["share_paise"] for s in e["splits"]}
+        desc = e["description"] + (f" ({e['original_currency']} {_major(e['original_amount_minor'], e['original_currency'])})"
+                                   if e["original_currency"] else "")
+        rows.append([clock.ist(e["created_at"]).strftime("%d %b"), Paragraph(desc, st["BodyText"]), names.get(e["paid_by"], ""),
+                     money(e["amount_paise"])] + [money(shares.get(u, 0)) if shares.get(u) else "" for u in member_ids])
+    story += [Paragraph("<b>Expenses</b>", st["Heading3"]), Table(rows, repeatRows=1, style=grid), Spacer(1, 5 * mm)]
+    summary = [["Person", "Paid", "Share", "Net for the month", "Share %"]] + \
+        [[m["name"], money(m["paid"]), money(m["share"]), money(m["net"]), f"{m['share_pct']}%"] for m in ins["members"]]
+    story += [Paragraph("<b>Summary</b>", st["Heading3"]), Table(summary, style=grid), Spacer(1, 5 * mm)]
+    if pays:
+        prow = [["Date", "From", "To", "Amount", "Receipt"]] + \
+            [[clock.ist(p["created_at"]).strftime("%d %b"), names.get(p["payer_id"], ""), names.get(p["receiver_id"], ""),
+              money(p["amount_paise"]), (p["status"] or "").title()] for p in pays]
+        story += [Paragraph("<b>Payments</b>", st["Heading3"]), Table(prow, style=grid), Spacer(1, 5 * mm)]
+    story.append(Paragraph("<b>Still owed today</b>", st["Heading3"]))
+    story.append(Paragraph("<br/>".join(f"{a} owes {b} {money(v)}" for a, b, v in debts) or "Everyone is square.", st["Normal"]))
+    doc.build(story)
+    fname = f"{g['name'].replace(' ', '_')}_{ins['month']}.pdf"
+    return Response(content=buf.getvalue(), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})

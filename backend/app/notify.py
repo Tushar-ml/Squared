@@ -8,12 +8,15 @@ import json
 import uuid
 from datetime import datetime, time, timedelta
 
-from . import analytics, clock
+from . import analytics, clock, push
 
 ACTIONABLE = {"N1", "N2"}
 CATEGORY = {"N1": "EXPENSE_CONFIRM", "N2": "PAYMENT_RECEIPT", "N3": "OPEN_WALLET", "N4": "SETTLE_NUDGE",
-            "N5": "OPEN_HOUSEHOLD", "N6": "REDEEM", "N7": "OPEN_WALLET", "N8": "OPEN_GROUP", "N9": "INFO"}
-ALL_IDS = ["N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8"]
+            "N5": "OPEN_HOUSEHOLD", "N6": "REDEEM", "N7": "OPEN_WALLET", "N8": "OPEN_GROUP", "N9": "INFO",
+            "C1": "OPEN_GROUP", "C2": "OPEN_EXPENSE", "C3": "OPEN_CHAT", "C4": "OPEN_INSIGHTS"}
+ALL_IDS = ["N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "C1", "C2", "C3", "C4"]
+# C* are everyday app notifications (recurring, comments, chat, budgets): quiet hours and opt-outs apply,
+# but they don't count toward the PRD's 2-per-day cap, which is for coin pushes only.
 
 
 def _hm(s: str) -> time:
@@ -81,7 +84,8 @@ def enqueue(conn, cfg, *, user_id: int, nid: str, title: str, body: str, dedupe_
 
 def sent_today(conn, user_id: int) -> int:
     start, end = clock.ist_day_bounds()
-    return conn.execute("SELECT count(*) c FROM notifications WHERE user_id=%s AND status='SENT' AND sent_at >= %s AND sent_at < %s",
+    return conn.execute("SELECT count(*) c FROM notifications WHERE user_id=%s AND status='SENT' AND sent_at >= %s AND sent_at < %s"
+                        " AND notification_id LIKE 'N%%'",
                         (user_id, start, end)).fetchone()["c"]
 
 
@@ -99,6 +103,10 @@ def dispatch(conn, cfg) -> int:
         if in_quiet_hours(cfg):
             conn.execute("UPDATE notifications SET deliver_after=%s WHERE id=%s", (next_quiet_end(cfg), row["id"]))
             continue
+        if row["notification_id"].startswith("C"):
+            _set(conn, row, "SENT")
+            push.send(conn, row)
+            continue
         cap = cfg["push"]["max_per_user_per_day"]
         used = sent_today(conn, row["user_id"])
         if row["notification_id"] not in ACTIONABLE:
@@ -111,6 +119,7 @@ def dispatch(conn, cfg) -> int:
             _set(conn, row, "INBOX_ONLY")
             continue
         _set(conn, row, "SENT")
+        push.send(conn, row)
         analytics.track(conn, "push_sent", user_id=row["user_id"], group_id=row["group_id"],
                         config_version=cfg.version, notification_id=row["notification_id"])
     return n

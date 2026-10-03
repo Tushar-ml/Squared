@@ -98,6 +98,36 @@ def user_net(conn, group_id: int) -> dict[int, int]:
     return out
 
 
+def simplified_debts(conn, group_id: int) -> dict[tuple[int, int], int]:
+    """Fewest payments that settle everyone: match the biggest debtor with the biggest creditor.
+
+    Uses per-user nets, so totals are identical to pair_debts; only who-pays-whom changes.
+    """
+    net = {u: v for u, v in user_net(conn, group_id).items() if v}
+    debtors = sorted(((u, -v) for u, v in net.items() if v < 0), key=lambda x: (-x[1], x[0]))
+    creditors = sorted(((u, v) for u, v in net.items() if v > 0), key=lambda x: (-x[1], x[0]))
+    out: dict[tuple[int, int], int] = {}
+    i = j = 0
+    debtors = [list(d) for d in debtors]
+    creditors = [list(c) for c in creditors]
+    while i < len(debtors) and j < len(creditors):
+        pay = min(debtors[i][1], creditors[j][1])
+        if pay > 0:
+            out[(debtors[i][0], creditors[j][0])] = out.get((debtors[i][0], creditors[j][0]), 0) + pay
+        debtors[i][1] -= pay
+        creditors[j][1] -= pay
+        if debtors[i][1] == 0:
+            i += 1
+        if creditors[j][1] == 0:
+            j += 1
+    return out
+
+
+def group_debts(conn, group: dict) -> dict[tuple[int, int], int]:
+    """What the app shows as "who owes whom": simplified if the group turned it on."""
+    return simplified_debts(conn, group["id"]) if group.get("simplify_debts") else pair_debts(conn, group["id"])
+
+
 def debt_age_start(conn, group_id: int, payer: int, receiver: int, before_payment: dict):
     """confirmed_at of the oldest unsettled confirmed expense where payer owes receiver (FIFO)."""
     exps = conn.execute(

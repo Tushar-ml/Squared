@@ -8,7 +8,7 @@ import hmac
 import uuid
 from datetime import timedelta
 
-from . import analytics, clock, coin_config, domain, experiment, fx, goals, ledger, notify
+from . import analytics, clock, coin_config, domain, experiment, fx, goals, i18n, ledger, notify
 from .settings import settings
 
 
@@ -127,8 +127,9 @@ def _maybe_first_redeem_push(conn, user_ids, cfg, group_id=None):
         w = ledger.get_wallet(conn, "USER", uid)
         if w["balance_cached"] >= cfg["push"]["first_redeem_threshold"]:
             cheapest = conn.execute("SELECT min(face_value_inr) v FROM catalog_items WHERE scope='USER' AND active").fetchone()["v"]
-            notify.enqueue(conn, cfg, user_id=uid, nid="N6", title="Coins ready",
-                           body=f"You can redeem an INR {cheapest or 25} voucher", dedupe_key=f"N6:{uid}",
+            loc = i18n.locale_of(conn, uid)
+            notify.enqueue(conn, cfg, user_id=uid, nid="N6", title=i18n.t(loc, "n6_title"),
+                           body=i18n.t(loc, "n6_body", value=cheapest or 25), dedupe_key=f"N6:{uid}",
                            group_id=group_id, payload={"route": "redeem"})
 
 
@@ -157,15 +158,16 @@ def on_expense_created(conn, ev, cfg):
     shares = {s["user_id"]: s["share_paise"] for s in e["splits"]}
     for uid in sorted(domain.participants(e) - {e["created_by"]}):
         share = shares.get(uid, 0)
+        loc = i18n.locale_of(conn, uid)
         notify.enqueue(
             conn, cfg, user_id=uid, nid="N1", group_id=e["group_id"],
-            title="Looks right?",
-            body=f"{adder} added {e['description']} {fx.fmt(e['amount_paise'], e['currency'])}. "
-                 f"Your share {fx.fmt(share, e['currency'])}. Looks right?",
+            title=i18n.t(loc, "n1_title"),
+            body=i18n.t(loc, "n1_body", adder=adder, desc=e["description"], amount=fx.fmt(e["amount_paise"], e["currency"]),
+                        share=fx.fmt(share, e["currency"])),
             dedupe_key=f"N1:{e['id']}:{e['version']}:{uid}",
             payload={"expense_id": e["id"], "version": e["version"], "group_id": e["group_id"]},
-            batch_key=f"{e['group_id']}:{e['created_by']}", batch_title="Review expenses",
-            batch_body=f"{adder} added {{n}} expenses. Review")
+            batch_key=f"{e['group_id']}:{e['created_by']}", batch_title=i18n.t(loc, "n1_batch_title"),
+            batch_body=i18n.t(loc, "n1_batch_body", adder=adder))
 
 
 def on_expense_confirmed(conn, ev, cfg):
@@ -282,8 +284,9 @@ def on_expense_disputed(conn, ev, cfg):
         return
     goals.refresh_progress(conn, e["group_id"], cfg)
     who = domain.user_names(conn, [ev["user_id"]]).get(ev["user_id"], "A roommate")
-    notify.enqueue(conn, cfg, user_id=e["created_by"], nid="N9", group_id=e["group_id"], title="Expense needs a look",
-                   body=f"{who} says {e['description']} isn't right. Edit it and they can confirm again.",
+    loc = i18n.locale_of(conn, e["created_by"])
+    notify.enqueue(conn, cfg, user_id=e["created_by"], nid="N9", group_id=e["group_id"], title=i18n.t(loc, "dispute_title"),
+                   body=i18n.t(loc, "dispute_body", name=who, desc=e["description"]),
                    dedupe_key=f"N9:dispute:{e['id']}:{e['version']}:{ev['user_id']}",
                    payload={"expense_id": e["id"], "group_id": e["group_id"]})
 
@@ -313,8 +316,9 @@ def on_payment_recorded(conn, ev, cfg):
     if not p or p["deleted_at"] or not experiment.eligibility(conn, p["group_id"], cfg)[0]:
         return
     payer = domain.user_names(conn, [p["payer_id"]]).get(p["payer_id"], "A roommate")
-    notify.enqueue(conn, cfg, user_id=p["receiver_id"], nid="N2", group_id=p["group_id"], title="Got it?",
-                   body=f"{payer} says they paid you {fx.fmt(p['amount_paise'], _group_currency(conn, p['group_id']))}. Got it?",
+    loc = i18n.locale_of(conn, p["receiver_id"])
+    notify.enqueue(conn, cfg, user_id=p["receiver_id"], nid="N2", group_id=p["group_id"], title=i18n.t(loc, "n2_title"),
+                   body=i18n.t(loc, "n2_body", payer=payer, amount=fx.fmt(p["amount_paise"], _group_currency(conn, p["group_id"]))),
                    dedupe_key=f"N2:{p['id']}", payload={"payment_id": p["id"], "group_id": p["group_id"]})
 
 
@@ -323,8 +327,9 @@ def on_payment_rejected(conn, ev, cfg):
     if not p or not experiment.eligibility(conn, p["group_id"], cfg)[0]:
         return
     rec = domain.user_names(conn, [p["receiver_id"]]).get(p["receiver_id"], "Your roommate")
-    notify.enqueue(conn, cfg, user_id=p["payer_id"], nid="N9", group_id=p["group_id"], title="Not received yet",
-                   body=f"{rec} hasn't received it yet. You can add a note.", dedupe_key=f"N9:reject:{p['id']}",
+    loc = i18n.locale_of(conn, p["payer_id"])
+    notify.enqueue(conn, cfg, user_id=p["payer_id"], nid="N9", group_id=p["group_id"], title=i18n.t(loc, "reject_title"),
+                   body=i18n.t(loc, "reject_body", name=rec), dedupe_key=f"N9:reject:{p['id']}",
                    payload={"payment_id": p["id"], "group_id": p["group_id"]})
 
 
@@ -404,8 +409,9 @@ def on_member_joined(conn, ev, cfg):
             g = conn.execute("SELECT name FROM groups WHERE id=%s", (gid,)).fetchone()
             who = domain.user_names(conn, [ev["user_id"]]).get(ev["user_id"], "A roommate")
             if experiment.eligibility(conn, gid, cfg)[0]:
-                notify.enqueue(conn, cfg, user_id=ref["inviter_id"], nid="N8", group_id=gid, title="New roommate",
-                               body=f"{who} joined {g['name']}", dedupe_key=f"N8:{ref['id']}",
+                loc = i18n.locale_of(conn, ref["inviter_id"])
+                notify.enqueue(conn, cfg, user_id=ref["inviter_id"], nid="N8", group_id=gid, title=i18n.t(loc, "n8_title"),
+                               body=i18n.t(loc, "n8_body", name=who, group=g["name"]), dedupe_key=f"N8:{ref['id']}",
                                payload={"group_id": gid})
             analytics.track(conn, "invite_joined", user_id=ev["user_id"], group_id=gid,
                             arm=experiment.arm_of(conn, gid, cfg), config_version=cfg.version, channel="link")

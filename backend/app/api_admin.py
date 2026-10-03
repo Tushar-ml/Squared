@@ -1,6 +1,6 @@
 """Ops console backend (FR-12). Role-based; every write needs a reason and is audit-logged."""
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -86,6 +86,65 @@ def reverse_entry(entry_id: str, body: Reason, ops=Depends(ops_user)):
         r = ledger.reverse(conn, e, reason="ops", cfg=cfg, metadata={"ops_reason": body.reason})
         audit(conn, ops, "REVERSE_ENTRY", "LEDGER_ENTRY", entry_id, body.reason)
         return {"reversal_id": str(r["id"]) if r else None}
+
+
+class BulkReverseIn(Reason):
+    entry_ids: list[str] = Field(min_length=1, max_length=500)
+
+
+@router.post("/ledger/bulk-reverse")
+def bulk_reverse(body: BulkReverseIn, ops=Depends(ops_user)):
+    """FR-19: reverse many entries in one audited action (e.g. after confirming a ring)."""
+    done, skipped = [], []
+    with db.tx() as conn:
+        cfg = coin_config.current(conn, fresh=True)
+        for eid in body.entry_ids:
+            e = conn.execute("SELECT * FROM coin_ledger WHERE id=%s", (eid,)).fetchone()
+            if not e or e["entry_type"] not in ("EARN", "REFUND"):
+                skipped.append(eid)
+                continue
+            ledger.reverse(conn, e, reason="ops", cfg=cfg, metadata={"ops_reason": body.reason, "bulk": True})
+            done.append(eid)
+        audit(conn, ops, "BULK_REVERSE", "LEDGER_ENTRY", f"{len(done)} entries", body.reason)
+    return {"reversed": len(done), "skipped": skipped}
+
+
+@router.get("/rings")
+def ring_report(days: int = 7, min_confirmations: int = 6, ops=Depends(ops_user)):
+    """FR-19: pairs who keep confirming each other's expenses, flagged with shared devices or new accounts."""
+    since = clock.now() - timedelta(days=days)
+    with db.tx() as conn:
+        rows = conn.execute(
+            """SELECT LEAST(e.created_by, c.user_id) a, GREATEST(e.created_by, c.user_id) b, count(*) n,
+                      COALESCE(SUM(e.amount_paise),0) volume, min(e.group_id) group_id
+               FROM expense_confirmations c JOIN expenses e ON e.id=c.expense_id
+               WHERE c.status='CONFIRMED' AND c.created_at >= %s
+               GROUP BY 1, 2 HAVING count(*) >= %s ORDER BY n DESC LIMIT 100""", (since, min_confirmations)).fetchall()
+        out = []
+        for r in rows:
+            ua = conn.execute("SELECT * FROM users WHERE id=%s", (r["a"],)).fetchone()
+            ub = conn.execute("SELECT * FROM users WHERE id=%s", (r["b"],)).fetchone()
+            earns = conn.execute(
+                """SELECT l.id, l.amount FROM coin_ledger l JOIN wallets w ON w.id=l.wallet_id
+                   WHERE w.owner_type='USER' AND w.owner_id = ANY(%s) AND l.entry_type='EARN' AND l.created_at >= %s
+                   AND l.counterparty_user_id = ANY(%s) AND l.status <> 'REJECTED'
+                   AND NOT EXISTS (SELECT 1 FROM coin_ledger x WHERE x.reverses_entry_id = l.id)""",
+                ([r["a"], r["b"]], since, [r["a"], r["b"]])).fetchall()
+            coins = sum(e["amount"] for e in earns)
+            flags = []
+            if ua["device_fingerprint"] and ua["device_fingerprint"] == ub["device_fingerprint"]:
+                flags.append("shared device")
+            for u in (ua, ub):
+                if clock.now() - u["created_at"] < timedelta(days=7):
+                    flags.append(f"{u['name'] or u['phone'][-4:]} is a new account")
+            if r["volume"] / max(r["n"], 1) < 5000:
+                flags.append("many small expenses")
+            out.append({"users": [{"id": ua["id"], "name": ua["name"], "phone": ua["phone"]},
+                                  {"id": ub["id"], "name": ub["name"], "phone": ub["phone"]}],
+                        "confirmations": r["n"], "volume": int(r["volume"]), "coins_between": int(coins),
+                        "entry_ids": [str(e["id"]) for e in earns],
+                        "group_id": r["group_id"], "flags": flags, "risk": "high" if len(flags) >= 2 else "medium" if flags else "low"})
+        return {"days": days, "pairs": out}
 
 
 class FreezeIn(Reason):
@@ -226,7 +285,7 @@ def metrics(ops=Depends(ops_user)):
             "outbox_pending": outbox, "deficit_wallets": deficits, "events_today": events}
 
 
-JOBS = {"close-weeks": jobs.close_weeks, "expire": jobs.expire_lots, "unverify": jobs.mark_unverified,
+JOBS = {"recurring": lambda: __import__("app.api_features", fromlist=["x"]).run_recurring(), "close-weeks": jobs.close_weeks, "expire": jobs.expire_lots, "unverify": jobs.mark_unverified,
         "digest": jobs.daily_digest, "nudges": jobs.settle_nudges, "expiry-warn": jobs.expiry_warnings,
         "integrity": jobs.integrity_check, "release-redemptions": jobs.release_redemptions}
 
