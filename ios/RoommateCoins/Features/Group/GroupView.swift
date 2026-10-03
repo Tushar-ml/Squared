@@ -19,6 +19,10 @@ struct GroupView: View {
             VStack(alignment: .leading, spacing: 20) {
                 if let d = detail {
                     header(d)
+                    if let a = state.activation, !a.activated, let eid = a.confirmExpenseId,
+                       let e = d.expenses.first(where: { $0.id == eid }), d.coinsEnabled {
+                        WelcomeBanner(groupName: d.name, expense: e, firstWin: a.firstWinCoins ?? 50)
+                    }
                     if d.coinsEnabled {
                         if let h = household {
                             if let last = h.lastWeek, [2, 3].contains(Calendar.current.component(.weekday, from: Date())) {
@@ -165,7 +169,10 @@ struct GroupView: View {
                     #endif
                     householdUnavailable = household == nil
                 }
-                if state.user?.introSeen == false && !UserDefaults.standard.bool(forKey: "introSeen") { showIntro = true }
+                if state.user?.introSeen == false && !UserDefaults.standard.bool(forKey: "introSeen") && !state.onboarded {
+                    showIntro = true  // S10, only for people who skipped the pre-login walkthrough
+                }
+                await state.refreshActivation()
             }
         } catch {
             self.error = error.localizedDescription

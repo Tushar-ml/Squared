@@ -11,6 +11,10 @@ struct HomeView: View {
     @State private var showSettings = false
     @State private var showNotifications = false
     @State private var unread = 0
+    @State private var inviteTarget: InviteTarget?
+    @AppStorage("activatedCardDismissed") private var activatedCardDismissed = false
+
+    struct InviteTarget: Identifiable { let id: Int; let name: String }
 
     var body: some View {
         @Bindable var state = state
@@ -18,6 +22,13 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     header
+                    if let a = state.activation {
+                        if !a.activated {
+                            ActivationChecklist(activation: a) { id, name in inviteTarget = InviteTarget(id: id, name: name) }
+                        } else if !activatedCardDismissed && a.group != nil {
+                            ActivatedCard { withAnimation { activatedCardDismissed = true } }
+                        }
+                    }
                     if state.coinsLive {
                         if inboxUnavailable { CoinsUnavailable() }
                         else if !inbox.isEmpty { NeedsYouSection(items: inbox) { Task { await load() } } }
@@ -40,7 +51,9 @@ struct HomeView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                NeoPopFloatingButton(title: "New flat") { showCreate = true }
+                NeoPopFloatingButton(title: groups.isEmpty && !loading ? "Set up your flat" : "New flat") {
+                    if groups.isEmpty { state.showFlatSetup = true } else { showCreate = true }
+                }
                     .padding(.horizontal, 20).padding(.bottom, 8)
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -49,6 +62,9 @@ struct HomeView: View {
         .onChange(of: state.refreshTick) { Task { await load() } }
         .sheet(isPresented: $showCreate) { CreateGroupSheet { id in Task { await load(); state.open(.group(id)) } } }
         .sheet(isPresented: $showJoin) { PasteInviteSheet() }
+        .sheet(item: $inviteTarget, onDismiss: { Task { await load() } }) { t in
+            InviteSheet(groupId: t.id, groupName: t.name, coinsEnabled: true)
+        }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showNotifications, onDismiss: { Task { await load() } }) { NotificationsInboxView() }
     }
@@ -90,7 +106,7 @@ struct HomeView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("No flats yet").font(Theme.body(17, .bold))
-                        Text("Create your flat and invite roommates. Every confirmed expense earns you both coins.")
+                        Text("Set up your flat in under a minute, or tap the invite link a roommate sent you.")
                             .font(Theme.body(14)).foregroundStyle(Theme.muted)
                     }
                 }
@@ -113,7 +129,14 @@ struct HomeView: View {
             inboxUnavailable = true
         } catch {}
         if let n: NotificationsResponse = try? await APIClient.shared.request("GET", "/me/notifications") { unread = n.unread ?? 0 }
-        await state.refreshCoins()
+        await state.refreshActivation()
+        await state.refreshCoins(celebrate: false)
+        // a full-screen celebration presented mid pull-to-refresh leaves the refresh control stuck;
+        // show it once the list has settled
+        Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            await state.pollCelebrations()
+        }
     }
 }
 

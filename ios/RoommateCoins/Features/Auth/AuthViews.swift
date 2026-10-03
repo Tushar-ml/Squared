@@ -18,7 +18,7 @@ struct PhoneEntryView: View {
                 Text("ROOMMATE\nCOINS").font(.system(size: 22, weight: .black)).tracking(2).lineSpacing(-2)
             }
             .onLongPressGesture { showServer = true }
-            Text(sent ? "Enter the code we sent to \(phone)" : "Keep your flat square.\nEarn together.")
+            Text(sent ? "Enter the code we sent to +91 \(phone)" : "Keep your flat square.\nEarn together.")
                 .font(Theme.title(30))
                 .fixedSize(horizontal: false, vertical: true)
             if !sent {
@@ -26,6 +26,9 @@ struct PhoneEntryView: View {
             } else {
                 field("6-digit code", text: $otp, keyboard: .numberPad, prefix: nil)
                     .textContentType(.oneTimeCode)
+                    .onChange(of: otp) { _, v in
+                        if v.count == 6 && !busy { Task { await submit() } }   // no extra tap once the code is in
+                    }
             }
             if let error { Text(error).font(Theme.body(13)).foregroundStyle(Theme.owe) }
             Spacer()
@@ -80,51 +83,85 @@ struct PhoneEntryView: View {
 
 struct ProfileSetupView: View {
     @Environment(AppState.self) private var state
+    @State private var step = 0
     @State private var name = ""
     @State private var email = ""
     @State private var upi = ""
     @State private var busy = false
     @State private var error: String?
+    @FocusState private var focused: Bool
+
+    private var editing: Bool { !(state.user?.name.isEmpty ?? true) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Spacer().frame(height: 20)
-            SectionLabel("Almost there")
-            Text("What do your roommates call you?").font(Theme.title(28))
-            input("Your name", $name)
-            input("Email (for voucher codes)", $email, keyboard: .emailAddress)
-            input("UPI ID (so roommates can pay you)", $upi, keyboard: .emailAddress)
+            if !editing { PageBars(count: 2, current: step).padding(.top, 12) }
+            if step == 0 {
+                SectionLabel(editing ? "Your profile" : "Almost there")
+                Text("What do your roommates call you?").font(Theme.title(28))
+                input("Your name", $name, content: .givenName)
+                Text("This is how you'll show up on expenses and confirmations.").font(Theme.body(13)).foregroundStyle(Theme.muted)
+            } else {
+                SectionLabel("Optional")
+                Text("Make settling up painless").font(Theme.title(28))
+                input("UPI ID, e.g. \(name.lowercased().filter(\.isLetter))@okbank", $upi, keyboard: .emailAddress)
+                Text("Roommates can pay you in one tap from their UPI app.").font(Theme.body(13)).foregroundStyle(Theme.muted)
+                input("Email", $email, keyboard: .emailAddress, content: .emailAddress)
+                Text("We send voucher codes here when you redeem coins.").font(Theme.body(13)).foregroundStyle(Theme.muted)
+            }
             if let error { Text(error).font(Theme.body(13)).foregroundStyle(Theme.owe) }
             Spacer()
-            NeoPopFloatingButton(title: "Continue", enabled: !busy && !name.trimmingCharacters(in: .whitespaces).isEmpty) {
-                Task { await save() }
+            NeoPopFloatingButton(title: step == 0 && !editing ? "Next" : "Continue",
+                                 enabled: !busy && !name.trimmingCharacters(in: .whitespaces).isEmpty) {
+                if step == 0 && !editing { withAnimation { step = 1 } } else { Task { await save() } }
+            }
+            if step == 1 && !editing {
+                Button("Add these later") { Task { await save(skipDetails: true) } }
+                    .font(Theme.body(14, .semibold)).foregroundStyle(Theme.muted).frame(maxWidth: .infinity).frame(minHeight: 44)
             }
         }
         .padding(24)
         .onAppear {
             name = state.user?.name ?? ""; email = state.user?.email ?? ""; upi = state.user?.upiId ?? ""
+            if editing { step = 0 }
+            #if DEBUG
+            if DebugAutomation.noFocus { return }
+            #endif
+            focused = true
         }
     }
 
-    private func input(_ p: String, _ t: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
+    private func input(_ p: String, _ t: Binding<String>, keyboard: UIKeyboardType = .default,
+                       content: UITextContentType? = nil) -> some View {
         TextField(p, text: t)
             .keyboardType(keyboard)
+            .textContentType(content)
             .textInputAutocapitalization(keyboard == .default ? .words : .never)
             .autocorrectionDisabled()
             .font(Theme.body(17, .semibold))
+            .focused($focused)
             .padding(16)
             .background(Theme.surface)
             .overlay(Rectangle().stroke(Theme.line))
     }
 
-    private func save() async {
+    private func save(skipDetails: Bool = false) async {
         busy = true
         defer { busy = false }
         do {
-            let u: User = try await APIClient.shared.request("PATCH", "/me", body: [
-                "name": name, "email": email.isEmpty ? nil : email, "upi_id": upi.isEmpty ? nil : upi])
+            var body: [String: Any?] = ["name": name]
+            if !skipDetails || editing {
+                body["email"] = email.isEmpty ? nil : email
+                body["upi_id"] = upi.isEmpty ? nil : upi
+            }
+            let u: User = try await APIClient.shared.request("PATCH", "/me", body: body)
+            let wasNew = !editing
             state.user = u
             state.needsProfile = false
+            if wasNew {
+                APIClient.shared.track("profile_completed", props: ["upi": !upi.isEmpty && !skipDetails, "email": !email.isEmpty && !skipDetails])
+                await state.routeAfterProfile()
+            }
         } catch { self.error = error.localizedDescription }
     }
 }

@@ -107,6 +107,7 @@ struct JoinGroupSheet: View {
             let r: AcceptResponse = try await APIClient.shared.request("POST", "/invites/accept", body: ["token": token])
             state.pendingJoinToken = nil
             dismiss()
+            await state.refreshActivation()
             state.refreshTick += 1
             state.open(.group(r.groupId))
             if let name = r.groupName { state.showToast("Joined \(name)") }

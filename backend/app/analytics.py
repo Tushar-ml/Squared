@@ -5,6 +5,9 @@ import json
 KNOWN_CLIENT_EVENTS = {
     "coins_card_viewed", "expense_confirm_tapped", "remind_tapped", "payment_marked_paid", "redeem_started",
     "invite_shared", "push_opened", "push_actioned", "kill_switch_observed", "intro_viewed", "intro_skipped",
+    # activation funnel
+    "onboarding_viewed", "onboarding_completed", "signup_completed", "profile_completed", "flat_setup_started",
+    "flat_created", "invite_step_viewed", "invite_step_skipped", "first_expense_started", "checklist_tapped",
 }
 
 

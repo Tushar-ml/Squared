@@ -42,7 +42,10 @@ struct RootView: View {
         @Bindable var state = state
         ZStack {
             Theme.bg.ignoresSafeArea()
-            if !state.signedIn {
+            if !state.signedIn && !state.onboarded {
+                WalkthroughView { withAnimation { state.onboarded = true } }
+                    .transition(.opacity)
+            } else if !state.signedIn {
                 PhoneEntryView()
             } else if state.needsProfile {
                 ProfileSetupView()
@@ -64,6 +67,7 @@ struct RootView: View {
                 .animation(.easeOut, value: state.toast)
             }
         }
+        .fullScreenCover(isPresented: $state.showFlatSetup) { FlatSetupFlow() }
         .fullScreenCover(item: $state.celebration) { c in
             CelebrationView(celebration: c)
                 .presentationBackground(.clear)

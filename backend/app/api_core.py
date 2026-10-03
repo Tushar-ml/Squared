@@ -70,6 +70,7 @@ def otp_verify(body: OtpVerify):
             user = conn.execute(
                 "INSERT INTO users (phone, phone_verified, device_fingerprint, created_at) VALUES (%s, true, %s, %s) RETURNING *",
                 (phone, body.device_id, clock.now())).fetchone()
+            analytics.track(conn, "signup_completed", user_id=user["id"], platform="server")
         else:
             conn.execute("UPDATE users SET phone_verified=true, device_fingerprint=COALESCE(%s, device_fingerprint) WHERE id=%s",
                          (body.device_id, user["id"]))

@@ -296,3 +296,21 @@ enum JSONValue: Codable, Hashable {
     var intValue: Int? { if case .int(let v) = self { return v }; if case .string(let s) = self { return Int(s) }; return nil }
     var stringValue: String? { if case .string(let v) = self { return v }; return nil }
 }
+
+struct ActivationStep: Codable, Hashable, Identifiable { let id: String; let title: String; let done: Bool }
+struct ActivationGroup: Codable, Hashable {
+    let id: Int; let name: String; let memberCount: Int; let expectedMembers: Int?; let createdByMe: Bool; let invitesSent: Int
+}
+struct Activation: Codable, Equatable {
+    let profileDone: Bool
+    let group: ActivationGroup?
+    let steps: [ActivationStep]
+    let activated: Bool
+    let nextStep: String?
+    let confirmExpenseId: Int?
+    let waitingExpenseId: Int?
+    let waitingOn: [String?]?
+    let coinsEnabled: Bool
+    let firstWinCoins: Int?
+    var doneCount: Int { steps.filter(\.done).count }
+}

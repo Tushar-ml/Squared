@@ -85,13 +85,26 @@ final class APIClient {
                     code = d["code"] as? String
                 }
             }
-            if status == 401 { NotificationCenter.default.post(name: .sessionExpired, object: nil) }
+            if status == 401 && token != nil { NotificationCenter.default.post(name: .sessionExpired, object: nil) }
             throw APIError(status: status, message: message, code: code)
         }
         return data
     }
 
+    /// Funnel events from before sign-in (walkthrough) wait here and are sent once there is a session.
+    private var queuedEvents: [(String, Int?, [String: Any])] = []
+    private let queueLock = NSLock()
+
+    func flushQueuedEvents() {
+        queueLock.lock(); let events = queuedEvents; queuedEvents = []; queueLock.unlock()
+        for e in events { track(e.0, groupId: e.1, props: e.2) }
+    }
+
     func track(_ name: String, groupId: Int? = nil, props: [String: Any] = [:]) {
+        guard token != nil else {
+            queueLock.lock(); queuedEvents.append((name, groupId, props)); queueLock.unlock()
+            return
+        }
         Task {
             try? await raw("POST", "/analytics/events", body: ["name": name, "group_id": groupId, "props": props,
                                                                "app_version": Self.appVersion])
