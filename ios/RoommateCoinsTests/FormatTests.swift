@@ -38,3 +38,18 @@ final class FormatTests: XCTestCase {
         XCTAssertEqual(w.expiringSoon.coins, 40)
     }
 }
+
+final class ConfigDecodeTests: XCTestCase {
+    func testDecodesClientConfig() throws {
+        let json = """
+        {"version":3,"enabled":true,"kill_switch":false,"coin_value_inr":0.25,"coins_per_inr":4,
+         "surprise":{"p_any":0.2,"p_3x":0.05,"p_2x":0.15},
+         "earn":{"first_win":50,"expense_adder":5,"expense_confirmer":2,"settle_payer":20,"settle_quick_bonus":10,
+                 "settle_receiver":10,"invite_each":50,"household_goal":120,"household_goal_target":5,"quick_window_hours":48}}
+        """.data(using: .utf8)!
+        let d = JSONDecoder(); d.keyDecodingStrategy = .convertFromSnakeCase
+        let c = try d.decode(CoinConfig.self, from: json)
+        XCTAssertEqual(c.surprise.p3x, 0.05)
+        XCTAssertEqual(c.earn.householdGoal, 120)
+    }
+}

@@ -25,6 +25,8 @@ final class APIClient {
         let c = URLSessionConfiguration.default
         c.timeoutIntervalForRequest = 10
         c.waitsForConnectivity = false
+        c.requestCachePolicy = .reloadIgnoringLocalCacheData  // balances and coins must never come from cache
+        c.urlCache = nil
         return URLSession(configuration: c)
     }()
 

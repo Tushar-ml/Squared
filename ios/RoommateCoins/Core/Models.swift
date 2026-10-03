@@ -248,7 +248,11 @@ struct PrefsResponse: Codable { var prefs: [NotificationPref]; let hideCoins: Bo
 
 struct RemindResponse: Codable { let reminded: [PersonRef] }
 
-struct Surprise: Codable { let pAny: Double; let p3x: Double; let p2x: Double }
+struct Surprise: Codable {
+    let pAny: Double; let p3x: Double; let p2x: Double
+    // .convertFromSnakeCase turns "p_3x" into "p3X"
+    enum CodingKeys: String, CodingKey { case pAny, p3x = "p3X", p2x = "p2X" }
+}
 struct EarnConfig: Codable {
     let firstWin: Int; let expenseAdder: Int; let expenseConfirmer: Int; let settlePayer: Int; let settleQuickBonus: Int
     let settleReceiver: Int; let inviteEach: Int; let householdGoal: Int; let householdGoalTarget: Int; let quickWindowHours: Int

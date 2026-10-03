@@ -159,7 +159,12 @@ struct GroupView: View {
                     household = try await APIClient.shared.request("GET", "/groups/\(groupId)/household")
                     householdUnavailable = false
                     APIClient.shared.track("coins_card_viewed", groupId: groupId, props: ["surface": "household"])
-                } catch { householdUnavailable = household == nil }
+                } catch {
+                    #if DEBUG
+                    print("household load failed: \(error)")
+                    #endif
+                    householdUnavailable = household == nil
+                }
                 if state.user?.introSeen == false && !UserDefaults.standard.bool(forKey: "introSeen") { showIntro = true }
             }
         } catch {
