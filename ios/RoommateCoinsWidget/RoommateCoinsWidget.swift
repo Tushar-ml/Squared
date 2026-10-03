@@ -35,7 +35,32 @@ struct RoommateCoinsWidgetView: View {
     private let amber = Color(red: 0.96, green: 0.70, blue: 0.0)
 
     var body: some View {
-        if let s = entry.snap {
+        if let s = entry.snap, family == .systemMedium {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(s.name.isEmpty ? "ROOMMATE COINS" : "HI \(s.name.uppercased())")
+                        .font(.system(size: 10, weight: .bold)).tracking(1.2).foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    balance(s, size: 22)
+                }
+                Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1)
+                VStack(alignment: .leading, spacing: 10) {
+                    if let c = s.coins {
+                        HStack(spacing: 6) {
+                            Circle().fill(amber).frame(width: 14, height: 14)
+                            Text("\(c) coins").font(.system(size: 15, weight: .heavy, design: .rounded)).foregroundStyle(amber)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Text(s.needsYou > 0 ? "\(s.needsYou)" : "0").font(.system(size: 28, weight: .heavy, design: .rounded))
+                        .foregroundStyle(s.needsYou > 0 ? amber : .secondary)
+                    Text(s.needsYou == 1 ? "waiting for you" : (s.needsYou == 0 ? "nothing waiting" : "waiting for you"))
+                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                }
+                .frame(width: 110, alignment: .leading)
+            }
+            .widgetURL(URL(string: "roommatecoins://open?route=home"))
+        } else if let s = entry.snap {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Circle().fill(amber).frame(width: 14, height: 14)
@@ -47,16 +72,7 @@ struct RoommateCoinsWidgetView: View {
                     }
                 }
                 Spacer(minLength: 0)
-                if s.youOwe > 0 {
-                    Text("YOU OWE").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
-                    Text(money(s.youOwe, s.currency)).font(.system(size: family == .systemSmall ? 18 : 22, weight: .heavy)).minimumScaleFactor(0.6)
-                } else if s.youAreOwed > 0 {
-                    Text("YOU ARE OWED").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
-                    Text(money(s.youAreOwed, s.currency)).font(.system(size: family == .systemSmall ? 18 : 22, weight: .heavy))
-                        .foregroundStyle(Color(red: 0.02, green: 0.76, blue: 0.44)).minimumScaleFactor(0.6)
-                } else {
-                    Text("All square").font(.system(size: 18, weight: .heavy))
-                }
+                balance(s, size: 18)
                 if s.needsYou > 0 {
                     Text("\(s.needsYou) waiting for you").font(.system(size: 11, weight: .semibold)).foregroundStyle(amber)
                 }
@@ -68,6 +84,22 @@ struct RoommateCoinsWidgetView: View {
                 Spacer()
                 Text("Open Roommate Coins to sign in").font(.system(size: 13, weight: .semibold))
             }
+        }
+    }
+}
+
+extension RoommateCoinsWidgetView {
+    @ViewBuilder
+    func balance(_ s: WidgetSnapshot, size: CGFloat) -> some View {
+        if s.youOwe > 0 {
+            Text("YOU OWE").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
+            Text(money(s.youOwe, s.currency)).font(.system(size: size, weight: .heavy)).minimumScaleFactor(0.5).lineLimit(1)
+        } else if s.youAreOwed > 0 {
+            Text("YOU ARE OWED").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
+            Text(money(s.youAreOwed, s.currency)).font(.system(size: size, weight: .heavy)).minimumScaleFactor(0.5).lineLimit(1)
+                .foregroundStyle(Color(red: 0.02, green: 0.76, blue: 0.44))
+        } else {
+            Text("All square").font(.system(size: size, weight: .heavy))
         }
     }
 }

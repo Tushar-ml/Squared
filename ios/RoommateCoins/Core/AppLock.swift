@@ -13,6 +13,7 @@ enum AppLock {
 /// Covers the app until Face ID (or the passcode) succeeds.
 struct LockScreen: View {
     @Environment(AppState.self) private var state
+    @Environment(\.scenePhase) private var phase
     var body: some View {
         VStack(spacing: 22) {
             Spacer()
@@ -23,7 +24,9 @@ struct LockScreen: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg.ignoresSafeArea())
-        .task { await unlock() }
+        // Prompt as soon as the app is actually in front; a request made while backgrounded just fails.
+        .task { if phase == .active { await unlock() } }
+        .onChange(of: phase) { _, p in if p == .active { Task { await unlock() } } }
     }
 
     private func unlock() async {
