@@ -8,7 +8,7 @@ struct MainTabs: View {
         @Bindable var state = state
         TabView(selection: $state.tab) {
             HomeView()
-                .tabItem { Label("Flats", systemImage: "house.fill") }
+                .tabItem { Label("Groups", systemImage: "person.3.fill") }
                 .tag(AppTab.flats)
             NavigationStack { ActivityView().routeDestinations() }
                 .tabItem { Label("Activity", systemImage: "bolt.horizontal.fill") }
@@ -56,7 +56,7 @@ struct ActivityView: View {
     var body: some View {
         List {
             if loaded && items.isEmpty {
-                Text("Nothing yet. Activity from all your flats shows up here.")
+                Text("Nothing yet. Activity from all your groups and friends shows up here.")
                     .font(Theme.body(14)).foregroundStyle(Theme.muted).listRowBackground(Theme.bg)
             }
             ForEach(sections, id: \.0) { day, rows in

@@ -43,3 +43,13 @@ def test_self_confirmation_does_not_activate(w):
     w.expense("Rahul", g, 600)
     st, _ = steps(w, "Rahul")
     assert not st["activated"]
+
+
+def test_starting_a_new_group_does_not_undo_activation(w):
+    w.user("Aman"); w.user("Priya")
+    g = w.flat("Aman", "Priya")
+    e = w.expense("Aman", g, 300)
+    w.confirm("Priya", e)
+    assert w.req("Aman", "GET", "/me/activation")["activated"]
+    w.req("Aman", "POST", "/groups", {"name": "Goa", "group_type": "TRIP"})   # newer, empty
+    assert w.req("Aman", "GET", "/me/activation")["activated"]

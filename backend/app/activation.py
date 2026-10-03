@@ -1,4 +1,4 @@
-"""New-user activation state (PRD goal 1: first confirmed expense with a roommate within 48h).
+"""New-user activation state (PRD goal 1: first expense confirmed by someone else within 48h).
 
 Computed from core data so it is always correct, whatever device or order the steps happened in.
 """
@@ -15,7 +15,11 @@ def state(conn, user: dict) -> dict:
     g = conn.execute(
         """SELECT g.* FROM groups g JOIN group_members m ON m.group_id=g.id
            WHERE m.user_id=%s AND m.left_at IS NULL
-           ORDER BY (g.group_type='HOME') DESC, g.created_at DESC LIMIT 1""", (uid,)).fetchone()
+           ORDER BY EXISTS (SELECT 1 FROM expenses e JOIN expense_confirmations c
+                              ON c.expense_id=e.id AND c.expense_version=e.version AND c.status='CONFIRMED'
+                            WHERE e.group_id=g.id AND e.deleted_at IS NULL AND c.user_id <> e.created_by) DESC,
+                    (SELECT count(*) FROM group_members x WHERE x.group_id=g.id AND x.left_at IS NULL) >= 2 DESC,
+                    (g.group_type<>'DIRECT') DESC, g.created_at DESC LIMIT 1""", (uid,)).fetchone()
     out = {"profile_done": bool(user["name"].strip()), "group": None, "steps": [], "activated": False,
            "next_step": None, "confirm_expense_id": None, "waiting_expense_id": None, "waiting_on": [],
            "coins_enabled": False}
@@ -65,8 +69,8 @@ def state(conn, user: dict) -> dict:
                         "invites_sent": invites}
         out["first_win_coins"] = cfg["earn"]["first_win"]
     steps = [
-        {"id": "flat", "title": "Set up your flat", "done": g is not None},
-        {"id": "roommates", "title": "Bring in a roommate", "done": members >= 2},
+        {"id": "flat", "title": "Start a group", "done": g is not None},
+        {"id": "roommates", "title": "Bring someone in", "done": members >= 2},
         {"id": "expense", "title": "Add a shared expense", "done": has_expense},
         {"id": "confirm", "title": "Get it confirmed", "done": activated},
     ]

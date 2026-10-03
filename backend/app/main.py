@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from . import activation, api_admin, api_coins, api_core, api_features, api_insights, db, seed
 
 logging.basicConfig(level=logging.INFO)
-app = FastAPI(title="Roommate Coins API", version="1.0.0")
+app = FastAPI(title="Squared API", version="1.0.0")
 STATIC = pathlib.Path(__file__).parent / "static"
 
 

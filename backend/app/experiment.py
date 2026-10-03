@@ -10,8 +10,8 @@ def bucket(experiment_key: str, group_id: int) -> float:
 
 
 def assign(conn, group: dict, cfg) -> str | None:
-    """Assign once, deterministically. Only Home groups in India enter the experiment."""
-    if group["group_type"] != "HOME" or group["country"] != "IN":
+    """Assign once, deterministically. Groups of any type in India enter the experiment."""
+    if group["country"] != "IN":
         return None
     key = cfg["experiment"]["key"]
     row = conn.execute("SELECT arm FROM experiment_assignments WHERE experiment_key=%s AND group_id=%s",
@@ -49,8 +49,6 @@ def eligibility(conn, group_id: int, cfg) -> tuple[bool, str]:
     g = conn.execute("SELECT * FROM groups WHERE id=%s", (group_id,)).fetchone()
     if g is None:
         return False, "no_group"
-    if g["group_type"] != "HOME":
-        return False, "not_home"
     if arm_of(conn, group_id, cfg) != "TREATMENT":
         return False, "control"
     if len(active_member_ids(conn, group_id)) < 2:

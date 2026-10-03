@@ -105,6 +105,7 @@ class World:
         self.c = client
         self.tokens = {}
         self.ids = {}
+        self.phones = {}
 
     def user(self, name, *, age_days=30, device=None, verified=True):
         phone = "+9190000" + str(len(self.ids) + 10).zfill(5)
@@ -117,6 +118,7 @@ class World:
             c.execute("INSERT INTO sessions (token, user_id) VALUES (%s,%s)", (tok, uid))
         self.tokens[name] = tok
         self.ids[name] = uid
+        self.phones[name] = phone
         return uid
 
     def h(self, name, **extra):

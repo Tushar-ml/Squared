@@ -66,7 +66,7 @@ def confirm_expense(expense_id: int, body: ConfirmIn, user=Depends(current_user)
         if not views.eligible(conn, e["group_id"], cfg):
             raise HTTPException(409, "Confirmation isn't available for this group")
         if user["id"] == e["created_by"]:
-            raise HTTPException(403, "You added this expense, so a roommate needs to confirm it")  # AB-1
+            raise HTTPException(403, "You added this expense, so someone else needs to confirm it")  # AB-1
         if user["id"] not in domain.participants(e):
             raise HTTPException(403, "Only people in this expense can confirm it")
         preview = views.safe(conn, views.reward_preview, conn, user["id"], e, cfg) if body.status == "CONFIRMED" else None
@@ -182,13 +182,13 @@ def wallet(user=Depends(current_user)):
         pending = conn.execute(
             "SELECT COALESCE(SUM(amount),0) s FROM coin_ledger WHERE wallet_id=%s AND status='PENDING'", (w["id"],)).fetchone()["s"]
         groups = conn.execute(
-            """SELECT g.id, g.name FROM groups g JOIN group_members m ON m.group_id=g.id
-               WHERE m.user_id=%s AND m.left_at IS NULL AND g.group_type='HOME'""", (user["id"],)).fetchall()
+            """SELECT g.* FROM groups g JOIN group_members m ON m.group_id=g.id
+               WHERE m.user_id=%s AND m.left_at IS NULL""", (user["id"],)).fetchall()
         pots = []
         for g in groups:
             if views.eligible(conn, g["id"], cfg):
                 pw = ledger.get_wallet(conn, "GROUP", g["id"])
-                pots.append({"group_id": g["id"], "group_name": g["name"], "coins": pw["balance_cached"]})
+                pots.append({"group_id": g["id"], "group_name": domain.display_name(conn, g, user["id"]), "coins": pw["balance_cached"]})
         notice = _latest_notice(conn, user["id"])
         bal = max(w["balance_cached"], 0)
         return {
@@ -238,7 +238,7 @@ def ledger_history(cursor: str | None = None, limit: int = 30, group_id: int | N
 
 def describe_entry(conn, r) -> dict:
     """Plain-language reason with the roommate involved (FR-6)."""
-    who = domain.user_names(conn, [r["counterparty_user_id"]]).get(r["counterparty_user_id"], "a roommate")
+    who = domain.user_names(conn, [r["counterparty_user_id"]]).get(r["counterparty_user_id"], "someone in the group")
     desc = "An expense"
     if r["source_type"] == "EXPENSE":
         e = conn.execute("SELECT description FROM expenses WHERE id=%s", (int(r["source_id"]),)).fetchone()
@@ -395,13 +395,17 @@ def create_invite(body: InviteIn, user=Depends(current_user)):
         link = f"{settings.public_base_url}/j/{token}"
         eligible = views.eligible(conn, body.group_id, cfg)
         if eligible:
-            msg = (f"I'm using Splitwise for our flat. Join {g['name']} so we all earn coins for keeping things square: {link}")
+            msg = (f"I'm splitting expenses on Squared. Join {_invite_target(g)} so we both earn coins for keeping things square: {link}")
             analytics.track(conn, "invite_shared", user_id=user["id"], group_id=body.group_id,
                             arm=experiment.arm_of(conn, body.group_id, cfg), config_version=cfg.version, channel="whatsapp")
         else:
-            msg = f"I'm using Splitwise for our flat. Join {g['name']}: {link}"
+            msg = f"I'm splitting expenses on Squared. Join {_invite_target(g)}: {link}"
         return {"referral_id": rid, "token": token, "link": link, "app_link": f"roommatecoins://join?token={token}",
                 "message": msg, "whatsapp_url": "whatsapp://send?text=" + _urlencode(msg)}
+
+
+def _invite_target(g) -> str:
+    return "me" if g["group_type"] == "DIRECT" else g["name"]
 
 
 def _urlencode(s: str) -> str:
@@ -439,6 +443,13 @@ def accept_invite(body: AcceptIn, user=Depends(current_user)):
         member = conn.execute("SELECT * FROM group_members WHERE group_id=%s AND user_id=%s", (gid, user["id"])).fetchone()
         if member and member["left_at"] is None:
             return {"group_id": gid, "already_member": True}
+        if g["group_type"] == "DIRECT":
+            # a friend link pairs exactly two people; reuse an existing pair instead of making a second one
+            existing = domain.direct_group(conn, inviter, user["id"])
+            if existing and existing["id"] != gid:
+                return {"group_id": existing["id"], "already_member": True}
+            if len(experiment.active_member_ids(conn, gid)) >= 2:
+                raise HTTPException(400, "This friend invite was already used")
         if member:
             conn.execute("UPDATE group_members SET left_at=NULL, joined_at=%s WHERE group_id=%s AND user_id=%s",
                          (clock.now(), gid, user["id"]))
@@ -454,7 +465,7 @@ def accept_invite(body: AcceptIn, user=Depends(current_user)):
             conn.execute("""INSERT INTO referrals (id, inviter_id, invitee_id, group_id, status, created_at)
                             VALUES (%s,%s,%s,%s,'JOINED',%s)""", (rid, inviter, user["id"], gid, clock.now()))
         events.emit(conn, "MemberJoined", group_id=gid, user_id=user["id"], referral_id=rid if not member else None)
-        return {"group_id": gid, "already_member": False, "group_name": g["name"]}
+        return {"group_id": gid, "already_member": False, "group_name": domain.display_name(conn, g, user["id"])}
 
 
 # ---------------------------------------------------------------- inbox & notifications (S4, FR-9)
@@ -486,8 +497,8 @@ def needs_you(user=Depends(current_user)):
                     if not elig_cache[e["group_id"]]:
                         continue
                     names = domain.user_names(conn, [e["paid_by"], e["created_by"]] + [s["user_id"] for s in e["splits"]])
-                    g = conn.execute("SELECT name FROM groups WHERE id=%s", (e["group_id"],)).fetchone()
-                    items.append({"kind": "EXPENSE", "group_name": g["name"],
+                    g = conn.execute("SELECT * FROM groups WHERE id=%s", (e["group_id"],)).fetchone()
+                    items.append({"kind": "EXPENSE", "group_name": domain.display_name(conn, g, user["id"]),
                                   "expense": views.expense_json(conn, user["id"], e, names, cfg, True)})
                 pays = conn.execute(
                     """SELECT p.* FROM payments p JOIN payment_confirmations pc ON pc.payment_id=p.id
@@ -499,8 +510,8 @@ def needs_you(user=Depends(current_user)):
                     if not elig_cache[p["group_id"]]:
                         continue
                     names = domain.user_names(conn, [p["payer_id"], p["receiver_id"]])
-                    g = conn.execute("SELECT name FROM groups WHERE id=%s", (p["group_id"],)).fetchone()
-                    items.append({"kind": "PAYMENT", "group_name": g["name"],
+                    g = conn.execute("SELECT * FROM groups WHERE id=%s", (p["group_id"],)).fetchone()
+                    items.append({"kind": "PAYMENT", "group_name": domain.display_name(conn, g, user["id"]),
                                   "payment": views.payment_json(conn, user["id"], p, names, True),
                                   "receiver_reward": cfg["earn"]["settle_receiver"]})
         except Exception:
@@ -568,8 +579,8 @@ def get_prefs(user=Depends(current_user)):
             "SELECT * FROM notification_prefs WHERE user_id=%s", (user["id"],))}
     labels = {"N1": "Expenses to confirm", "N2": "Payments to confirm", "N3": "Daily coin digest",
               "N4": "Settle-up nudges", "N5": "Monday household recap", "N6": "Redeem reminders",
-              "N7": "Expiring coins", "N8": "Roommate joined", "C1": "Recurring bills", "C2": "Comments",
-              "C3": "Flat chat", "C4": "Budget alerts",
+              "N7": "Expiring coins", "N8": "Someone joined your group", "C1": "Recurring bills", "C2": "Comments",
+              "C3": "Group chat", "C4": "Budget alerts",
               "C5": "Reminders to pay"}
     return {"prefs": [{"id": k, "label": v, "enabled": rows.get(k, True)} for k, v in labels.items()],
             "hide_coins": user["hide_coins"]}
@@ -633,8 +644,8 @@ landing = APIRouter()
 def invite_landing(token: str):
     read_token(token)
     app = f"roommatecoins://join?token={token}"
-    return f"""<!doctype html><meta name=viewport content="width=device-width"><title>Join on Roommate Coins</title>
+    return f"""<!doctype html><meta name=viewport content="width=device-width"><title>Join on Squared</title>
 <body style="background:#0d0d0d;color:#fff;font-family:-apple-system;padding:32px">
-<h2>You're invited to a flat</h2><p>Open the app to join and start earning coins together.</p>
+<h2>You're invited to split on Squared</h2><p>Open the app to join and start earning coins together.</p>
 <a href="{app}" style="display:inline-block;background:#fff;color:#000;padding:14px 22px;font-weight:700;text-decoration:none">OPEN APP</a>
 <script>location.href="{app}"</script></body>"""

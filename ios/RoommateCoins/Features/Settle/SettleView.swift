@@ -118,7 +118,7 @@ struct SettleView: View {
                             URLQueryItem(name: "pn", value: debt.creditorName ?? ""),
                             URLQueryItem(name: "am", value: String(format: "%.2f", Double(paise) / 100)),
                             URLQueryItem(name: "cu", value: "INR"),
-                            URLQueryItem(name: "tn", value: "\(detail?.name ?? "Flat") via Roommate Coins")]
+                            URLQueryItem(name: "tn", value: "\(detail?.name ?? "Split") via Squared")]
         if let url = comps.url, debt.creditorUpi != nil, UIApplication.shared.canOpenURL(url) {
             launchedUPI = true
             openURL(url)

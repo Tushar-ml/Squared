@@ -10,17 +10,25 @@ CATEGORIES = {
     "household": "Household",
     "transport": "Transport",
     "entertainment": "Entertainment",
+    "travel": "Travel",
+    "stay": "Stay",
+    "shopping": "Shopping",
+    "gifts": "Gifts",
     "other": "Other",
 }
 
 _RULES = [
+    ("stay", r"\b(hotel|airbnb|hostel|resort|homestay|villa|oyo|booking\.com)\b"),
     ("rent", r"\b(rent|deposit|maintenance|society)\b"),
     ("utilities", r"\b(wifi|wi-fi|internet|broadband|electric\w*|power|bill|gas|cylinder|water|dth|recharge|airtel|jio)\b"),
     ("groceries", r"\b(grocer\w*|milk|bread|eggs?|vegetables?|veggies|fruits?|zepto|blinkit|bigbasket|instamart|dmart|kirana)\b"),
     ("food", r"\b(swiggy|zomato|dinner|lunch|breakfast|pizza|biryani|food|cafe|restaurant|chai|coffee|takeaway)\b"),
     ("help", r"\b(maid|cook|cleaning|cleaner|helper|bai|driver|laundry|dhobi|ironing)\b"),
     ("household", r"\b(furniture|repair|plumber|electrician|detergent|toilet|kitchen|utensils?|bulb|curtain|mattress)\b"),
+    ("travel", r"\b(flights?|airfare|indigo|vistara|train|irctc|bus|visa|trip|ferry|toll)\b"),
     ("transport", r"\b(uber|ola|rapido|cab|taxi|auto|petrol|fuel|metro|parking)\b"),
+    ("gifts", r"\b(gift|birthday|present|anniversary|wedding|farewell|flowers|cake)\b"),
+    ("shopping", r"\b(amazon|flipkart|myntra|shopping|clothes|shoes|mall|nykaa)\b"),
     ("entertainment", r"\b(netflix|prime|hotstar|spotify|movie|party|drinks|beer|games?)\b"),
 ]
 

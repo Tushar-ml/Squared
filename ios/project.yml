@@ -31,9 +31,9 @@ targets:
     info:
       path: RoommateCoins/Resources/Info.plist
       properties:
-        CFBundleDisplayName: Roommate Coins
+        CFBundleDisplayName: Squared
         CFBundleLocalizations: [en, hi]
-        NSFaceIDUsageDescription: Unlock Roommate Coins with Face ID.
+        NSFaceIDUsageDescription: Unlock Squared with Face ID.
         NSCameraUsageDescription: Take a photo of a bill to attach it and read the total.
         NSPhotoLibraryUsageDescription: Attach a photo of a bill to an expense.
         UILaunchScreen:
@@ -64,7 +64,7 @@ targets:
     info:
       path: RoommateCoinsWidget/Info.plist
       properties:
-        CFBundleDisplayName: Roommate Coins
+        CFBundleDisplayName: Squared
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

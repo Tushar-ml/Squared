@@ -105,7 +105,7 @@ struct SettingsView: View {
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
                     NeoPopButton(title: "Sign out", style: .flatStroke, height: 44) { state.signOut(); if showsDone { dismiss() } }
                         .padding(.top, 12)
-                    Text("Roommate Coins \(APIClient.appVersion) · \(APIClient.shared.baseURL.host() ?? "")")
+                    Text("Squared \(APIClient.appVersion) · \(APIClient.shared.baseURL.host() ?? "")")
                         .font(Theme.body(11)).foregroundStyle(Theme.muted)
                 }
                 .padding(24)

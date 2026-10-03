@@ -82,7 +82,7 @@ struct RoommateCoinsWidgetView: View {
             VStack(alignment: .leading) {
                 Circle().fill(amber).frame(width: 16, height: 16)
                 Spacer()
-                Text("Open Roommate Coins to sign in").font(.system(size: 13, weight: .semibold))
+                Text("Open Squared to sign in").font(.system(size: 13, weight: .semibold))
             }
         }
     }
@@ -112,7 +112,7 @@ struct RoommateCoinsWidget: Widget {
                 .containerBackground(for: .widget) { Color(red: 0.05, green: 0.05, blue: 0.05) }
                 .environment(\.colorScheme, .dark)
         }
-        .configurationDisplayName("Roommate Coins")
+        .configurationDisplayName("Squared")
         .description("What you owe, what's waiting for you, and your coins.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }

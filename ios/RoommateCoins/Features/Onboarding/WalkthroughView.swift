@@ -10,9 +10,9 @@ struct WalkthroughView: View {
     let onDone: () -> Void
 
     private let slides: [(label: String, title: String, body: String)] = [
-        ("Split", "Shared bills,\nminus the chasing", "Rent, wifi, groceries. Log it once and everyone in the flat sees their share."),
-        ("Confirm", "Roommates agree\nin one tap", "No more \"did you see my message?\". A quick Confirm and the expense is settled as fair."),
-        ("Together", "Keep the flat square,\nearn together", "Confirming and settling up earn coins. Hit the weekly goal and the whole flat gets a bonus."),
+        ("Split", "Shared bills,\nminus the chasing", "Rent, trips, dinners, gifts. Log it once and everyone sees their share, in a group or with one friend."),
+        ("Confirm", "Everyone agrees\nin one tap", "No more \"did you see my message?\". A quick Confirm and the expense is settled as fair."),
+        ("Together", "Keep it square,\nearn together", "Confirming and settling up earn coins. Hit the weekly goal and the whole group gets a bonus."),
         ("Spend", "Coins become\nvouchers", "Groceries, food, broadband. 4 coins = INR 1, and your first voucher is just 100 coins."),
     ]
 
@@ -21,7 +21,7 @@ struct WalkthroughView: View {
             HStack {
                 HStack(spacing: 8) {
                     CoinGlyph(size: 22)
-                    Text("ROOMMATE COINS").font(.system(size: 13, weight: .black)).tracking(1.6)
+                    Text("SQUARED").font(.system(size: 13, weight: .black)).tracking(1.6)
                 }
                 Spacer()
                 Button("Skip") { finish(skipped: true) }
@@ -34,7 +34,7 @@ struct WalkthroughView: View {
             if state.pendingJoinToken != nil {
                 HStack(spacing: 10) {
                     Image(systemName: "envelope.open.fill").foregroundStyle(Theme.onAccent)
-                    Text("You've been invited to a flat. Sign up to join.").font(Theme.body(14, .bold)).foregroundStyle(Theme.onAccent)
+                    Text("You've been invited to split on Squared. Sign up to join.").font(Theme.body(14, .bold)).foregroundStyle(Theme.onAccent)
                     Spacer()
                 }
                 .padding(12).background(Theme.coin)

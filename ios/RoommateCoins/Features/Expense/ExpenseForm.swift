@@ -2,21 +2,37 @@ import PhotosUI
 import SwiftUI
 
 enum ExpenseCategory: String, CaseIterable, Identifiable {
-    case rent, utilities, groceries, food, help, household, transport, entertainment, other
+    case rent, utilities, groceries, food, help, household, transport, entertainment, travel, stay, shopping, gifts, other
     var id: String { rawValue }
     var label: String {
         switch self {
         case .rent: "Rent"; case .utilities: "Utilities"; case .groceries: "Groceries"; case .food: "Food"
         case .help: "House help"; case .household: "Household"; case .transport: "Transport"
-        case .entertainment: "Fun"; case .other: "Other"
+        case .entertainment: "Fun"; case .travel: "Travel"; case .stay: "Stay"; case .shopping: "Shopping"
+        case .gifts: "Gifts"; case .other: "Other"
         }
     }
     var icon: String {
         switch self {
         case .rent: "house.fill"; case .utilities: "bolt.fill"; case .groceries: "cart.fill"; case .food: "fork.knife"
         case .help: "person.fill"; case .household: "sofa.fill"; case .transport: "car.fill"
-        case .entertainment: "popcorn.fill"; case .other: "square.grid.2x2.fill"
+        case .entertainment: "popcorn.fill"; case .travel: "airplane"; case .stay: "bed.double.fill"
+        case .shopping: "bag.fill"; case .gifts: "gift.fill"; case .other: "square.grid.2x2.fill"
         }
+    }
+
+    /// Most likely categories first for the kind of group, the rest after.
+    static func ordered(for kind: GroupKind) -> [ExpenseCategory] {
+        let first: [ExpenseCategory] = switch kind {
+        case .home: [.rent, .utilities, .groceries, .food, .help, .household]
+        case .trip: [.stay, .travel, .food, .transport, .entertainment, .shopping]
+        case .couple: [.groceries, .food, .rent, .utilities, .entertainment, .gifts]
+        case .friends, .direct: [.food, .entertainment, .transport, .gifts, .travel, .shopping]
+        case .work: [.food, .transport, .gifts, .entertainment]
+        case .event: [.food, .gifts, .entertainment, .shopping, .stay]
+        case .other: [.food, .groceries, .transport, .utilities, .shopping]
+        }
+        return first + allCases.filter { !first.contains($0) }
     }
 }
 
@@ -101,7 +117,7 @@ struct ExpenseForm: View {
             VStack(alignment: .leading, spacing: 18) {
                 SectionLabel(recurringOnly ? "New recurring bill · \(group.name)" : (editing == nil ? "Add expense · \(group.name)" : "Edit expense"))
                 if editing == nil && !recurringOnly { scanRow }
-                TextField("What was it? e.g. Wifi bill", text: $desc)
+                TextField("What was it? e.g. \(GroupKind(group.groupType).expenseIdeas.first?.0 ?? "Dinner")", text: $desc)
                     .font(Theme.body(20, .bold)).focused($focus, equals: -1).submitLabel(.next)
                     .onSubmit { focus = -2 }
                     .padding(14).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
@@ -118,7 +134,7 @@ struct ExpenseForm: View {
                 }
                 splitSection
                 if editing == nil && mode != .equal && group.defaultSplit == nil {
-                    Button("Make this the flat's default split") { Task { await saveDefaultSplit() } }
+                    Button("Make this the group's default split") { Task { await saveDefaultSplit() } }
                         .font(Theme.body(13, .bold)).frame(minHeight: 44)
                 }
                 if editing == nil { repeatSection }
@@ -130,7 +146,7 @@ struct ExpenseForm: View {
                 }
                 .padding(.top, 8)
                 if editing?.confirmation?.status == "CONFIRMED" {
-                    Text("Changing the amount, payer or split resets confirmations. Roommates confirm again and coins are re-earned.")
+                    Text("Changing the amount, payer or split resets confirmations. Everyone confirms again and coins are re-earned.")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
                 }
             }
@@ -206,7 +222,7 @@ struct ExpenseForm: View {
     private var categoryRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(ExpenseCategory.allCases) { c in
+                ForEach(ExpenseCategory.ordered(for: GroupKind(group.groupType))) { c in
                     Button { category = (category == c ? nil : c) } label: {
                         Label(c.label, systemImage: c.icon).font(Theme.body(13, .semibold))
                             .padding(.horizontal, 12).frame(minHeight: 36)
@@ -446,7 +462,7 @@ struct ExpenseForm: View {
             let last = UserDefaults.standard.array(forKey: "lastSplit.\(group.id)") as? [Int]
             let remembered = Set(last ?? []).intersection(ids)
             included = remembered.isEmpty ? ids : remembered
-            if let ds = group.defaultSplit {          // the flat's saved default split (FR-16)
+            if let ds = group.defaultSplit {          // the group's saved default split (FR-16)
                 if ds.splitType == "PERCENT", let p = ds.percents {
                     mode = .percent
                     inputs = Dictionary(uniqueKeysWithValues: p.compactMap { k, v in Int(k).map { ($0, v == v.rounded() ? "\(Int(v))" : "\(v)") } })

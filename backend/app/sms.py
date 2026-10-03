@@ -18,7 +18,7 @@ def send_otp(phone: str, code: str) -> bool:
         sid = os.environ["TWILIO_ACCOUNT_SID"]
         r = httpx.post(f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
                        data={"To": phone, "From": os.environ["TWILIO_FROM"],
-                             "Body": f"{code} is your Roommate Coins code. It expires in 10 minutes."},
+                             "Body": f"{code} is your Squared code. It expires in 10 minutes."},
                        auth=(sid, os.environ["TWILIO_AUTH_TOKEN"]), timeout=6)
         return r.status_code in (200, 201)
     log.info("OTP for %s issued (no SMS provider configured; dev uses DEV_OTP)", phone[-4:])

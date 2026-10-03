@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Roommate Coins</string>
+	<string>Squared</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -54,7 +54,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo of a bill to attach it and read the total.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Unlock Roommate Coins with Face ID.</string>
+	<string>Unlock Squared with Face ID.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Attach a photo of a bill to an expense.</string>
 	<key>RCAPIBaseURL</key>

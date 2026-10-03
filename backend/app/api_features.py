@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from . import analytics, categories, clock, coin_config, db, domain, experiment, fx, i18n, notify, views
-from .api_core import ExpenseIn, create_expense
+from . import analytics, categories, clock, coin_config, db, domain, events, experiment, fx, i18n, notify, views
+from .api_core import ExpenseIn, _norm_phone, create_expense
 from .deps import current_user, require_member
 
 router = APIRouter(prefix="/api/v1")
@@ -135,7 +135,7 @@ def run_recurring() -> int:
                 with conn.transaction():
                     create_expense(conn, g, r["created_by"], body, recurring_id=r["id"])
                 made += 1
-            except HTTPException as e:   # e.g. someone left the flat: tell the creator, keep the schedule
+            except HTTPException as e:   # e.g. someone left the group: tell the creator, keep the schedule
                 notify.enqueue(conn, cfg, user_id=r["created_by"], nid="C1", group_id=g["id"],
                                title=i18n.t(_user_locale(conn, r["created_by"]), "recurring_failed_title"),
                                body=i18n.t(_user_locale(conn, r["created_by"]), "recurring_failed",
@@ -193,14 +193,13 @@ def update_group(group_id: int, body: GroupPatch, user=Depends(current_user)):
                 raise HTTPException(400, "Default split must be equal, percent or shares")
             conn.execute("UPDATE groups SET default_split=%s WHERE id=%s", (json.dumps(ds) if ds else None, group_id))
         g = conn.execute("SELECT * FROM groups WHERE id=%s", (group_id,)).fetchone()
-        return {"id": g["id"], "name": g["name"], "currency": g["currency"], "simplify_debts": g["simplify_debts"],
+        return {"id": g["id"], "name": domain.display_name(conn, g, user["id"]), "currency": g["currency"], "simplify_debts": g["simplify_debts"],
                 "default_split": g["default_split"], "expected_members": g["expected_members"]}
 
 
 @router.delete("/groups/{group_id}/members/{member_id}")
 def remove_member(group_id: int, member_id: int, user=Depends(current_user)):
     """Leave (yourself) or remove someone (group creator). Only once their balance is settled."""
-    from . import events
     with db.tx() as conn:
         g = require_member(conn, group_id, user["id"])
         if member_id != user["id"] and g["created_by"] != user["id"]:
@@ -410,7 +409,7 @@ def put_budgets(group_id: int, body: BudgetsIn, user=Depends(current_user)):
 
 
 def check_budgets(conn, group_id: int) -> None:
-    """Notify the flat once at 80% and once at 100% of a category budget each month."""
+    """Notify the group once at 80% and once at 100% of a category budget each month."""
     g = conn.execute("SELECT * FROM groups WHERE id=%s", (group_id,)).fetchone()
     cfg = coin_config.current(conn)
     month = clock.ist().strftime("%Y-%m")
@@ -475,7 +474,7 @@ def activity(limit: int = 60, user=Depends(current_user)):
         for i in items:
             g = groups[i["group_id"]]
             i["at"] = i["at"].isoformat()
-            i["group_name"] = g["name"]
+            i["group_name"] = domain.display_name(conn, g, user["id"])
             i["currency"] = g["currency"]
             i["actor_name"] = "You" if i["actor_id"] == uid else names.get(i["actor_id"])
             i["is_you"] = i["actor_id"] == uid
@@ -516,7 +515,7 @@ def send_message(group_id: int, body: MessageIn, user=Depends(current_user)):
                      (mid, group_id, user["id"], body.body.strip(), clock.now()))
         cfg = coin_config.current(conn)
         for uid in set(experiment.active_member_ids(conn, group_id)) - {user["id"]}:
-            notify.enqueue(conn, cfg, user_id=uid, nid="C3", group_id=group_id, title=g["name"],
+            notify.enqueue(conn, cfg, user_id=uid, nid="C3", group_id=group_id, title=domain.display_name(conn, g, uid),
                            body=f"{user['name']}: {body.body.strip()[:120]}", dedupe_key=f"C3:{mid}:{uid}",
                            payload={"group_id": group_id, "route": "chat"},
                            batch_key=None)
@@ -545,12 +544,12 @@ def register_device(body: DeviceIn, user=Depends(current_user)):
 
 @router.post("/groups/{group_id}/debts/{debtor_id}/remind")
 def remind_to_pay(group_id: int, debtor_id: int, user=Depends(current_user)):
-    """The person who is owed nudges a roommate to settle. Once per cooldown per pair."""
+    """The person who is owed nudges someone to settle. Once per cooldown per pair."""
     with db.tx() as conn:
         g = require_member(conn, group_id, user["id"])
         owed = domain.group_debts(conn, g).get((debtor_id, user["id"]), 0)
         if owed <= 0:
-            raise HTTPException(400, "They don't owe you anything in this flat")
+            raise HTTPException(400, "They don't owe you anything here")
         cfg = coin_config.current(conn)
         cooldown = timedelta(hours=cfg["push"]["remind_cooldown_hours"])
         last = domain.last_pay_reminder(conn, group_id, user["id"], debtor_id)
@@ -560,8 +559,76 @@ def remind_to_pay(group_id: int, debtor_id: int, user=Depends(current_user)):
         amount = fx.fmt(owed, g["currency"])
         notify.enqueue(conn, cfg, user_id=debtor_id, nid="C5", group_id=group_id,
                        title=i18n.t(loc, "pay_remind_title", name=user["name"]),
-                       body=i18n.t(loc, "pay_remind_body", name=user["name"], amount=amount, group=g["name"]),
+                       body=i18n.t(loc, "pay_remind_body", name=user["name"], amount=amount, group=domain.display_name(conn, g, debtor_id)),
                        dedupe_key=f"C5:{group_id}:{user['id']}:{debtor_id}:{clock.now().isoformat()}",
                        payload={"group_id": group_id, "creditor_id": user["id"], "route": "settle"})
         analytics.track(conn, "pay_remind_tapped", user_id=user["id"], group_id=group_id, debtor_id=debtor_id)
         return {"reminded_at": clock.now().isoformat(), "next_at": (clock.now() + cooldown).isoformat()}
+
+
+# ---------- friends: 1:1 splits without making a group ----------
+
+class FriendIn(BaseModel):
+    phone: str
+
+
+def _friend_json(conn, g, me: int, cfg) -> dict:
+    other = conn.execute(
+        """SELECT u.id, u.name FROM group_members m JOIN users u ON u.id=m.user_id
+           WHERE m.group_id=%s AND m.user_id<>%s AND m.left_at IS NULL LIMIT 1""", (g["id"], me)).fetchone()
+    return {"group_id": g["id"], "user_id": other["id"], "name": other["name"], "currency": g["currency"],
+            "my_net_paise": domain.user_net(conn, g["id"]).get(me, 0), "coins_enabled": views.eligible(conn, g["id"], cfg)}
+
+
+@router.get("/friends")
+def list_friends(user=Depends(current_user)):
+    with db.tx() as conn:
+        cfg = coin_config.current(conn)
+        gs = conn.execute(
+            """SELECT g.* FROM groups g JOIN group_members m ON m.group_id=g.id
+               WHERE m.user_id=%s AND m.left_at IS NULL AND g.group_type='DIRECT'
+                 AND (SELECT count(*) FROM group_members x WHERE x.group_id=g.id AND x.left_at IS NULL) = 2
+               ORDER BY g.created_at DESC""", (user["id"],)).fetchall()
+        return {"friends": [_friend_json(conn, g, user["id"], cfg) for g in gs]}
+
+
+@router.post("/friends")
+def add_friend(body: FriendIn, user=Depends(current_user)):
+    """Start splitting with someone already on Squared. Returns their 1:1 group (made once per pair)."""
+    phone = _norm_phone(body.phone)
+    with db.tx() as conn:
+        other = conn.execute("SELECT * FROM users WHERE phone=%s", (phone,)).fetchone()
+        if not other:
+            raise HTTPException(404, "They're not on Squared yet. Send them an invite link instead.")
+        if other["id"] == user["id"]:
+            raise HTTPException(400, "That's your own number")
+        cfg = coin_config.current(conn)
+        g = domain.direct_group(conn, user["id"], other["id"])
+        created = g is None
+        if created:
+            g = _new_direct_group(conn, user, cfg)
+            conn.execute("INSERT INTO group_members (group_id, user_id, joined_at) VALUES (%s,%s,%s)",
+                         (g["id"], other["id"], clock.now()))
+            events.emit(conn, "MemberJoined", group_id=g["id"], user_id=other["id"])
+        return {**_friend_json(conn, g, user["id"], cfg), "created": created}
+
+
+@router.post("/friends/invite")
+def invite_friend(user=Depends(current_user)):
+    """For someone not on Squared yet: a 1:1 group with just you, whose invite link pairs them with you."""
+    with db.tx() as conn:
+        cfg = coin_config.current(conn)
+        g = _new_direct_group(conn, user, cfg)
+    from .api_coins import InviteIn, create_invite
+    return {"group_id": g["id"], **create_invite(InviteIn(group_id=g["id"]), user)}
+
+
+def _new_direct_group(conn, user, cfg):
+    g = conn.execute(
+        """INSERT INTO groups (name, group_type, expected_members, currency, created_by, created_at)
+           VALUES ('Friends', 'DIRECT', 2, 'INR', %s, %s) RETURNING *""", (user["id"], clock.now())).fetchone()
+    conn.execute("INSERT INTO group_members (group_id, user_id, joined_at) VALUES (%s,%s,%s)",
+                 (g["id"], user["id"], clock.now()))
+    views.safe(conn, experiment.assign, conn, g, cfg)
+    events.emit(conn, "MemberJoined", group_id=g["id"], user_id=user["id"])
+    return g

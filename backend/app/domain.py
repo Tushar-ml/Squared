@@ -180,3 +180,23 @@ def last_pay_reminder(conn, group_id: int, creditor: int, debtor: int):
         """SELECT max(created_at) t FROM notifications WHERE notification_id='C5' AND group_id=%s AND user_id=%s
            AND payload->>'creditor_id' = %s""", (group_id, debtor, str(creditor))).fetchone()
     return r["t"] if r else None
+
+
+def direct_group(conn, a: int, b: int):
+    """The 1:1 friend group between two people, if they have one."""
+    return conn.execute(
+        """SELECT g.* FROM groups g
+           JOIN group_members ma ON ma.group_id=g.id AND ma.user_id=%s AND ma.left_at IS NULL
+           JOIN group_members mb ON mb.group_id=g.id AND mb.user_id=%s AND mb.left_at IS NULL
+           WHERE g.group_type='DIRECT' ORDER BY g.id LIMIT 1""", (a, b)).fetchone()
+
+
+def display_name(conn, g: dict, viewer_id: int) -> str:
+    """Friend splits are named after the other person; everything else uses the group name."""
+    if g["group_type"] != "DIRECT":
+        return g["name"]
+    r = conn.execute(
+        """SELECT u.name FROM group_members m JOIN users u ON u.id=m.user_id
+           WHERE m.group_id=%s AND m.user_id<>%s AND m.left_at IS NULL ORDER BY m.joined_at LIMIT 1""",
+        (g["id"], viewer_id)).fetchone()
+    return (r["name"] if r and r["name"] else None) or "Waiting for a friend"

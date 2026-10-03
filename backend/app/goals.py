@@ -73,15 +73,16 @@ def close_week(conn, group_id: int, week_start, cfg) -> dict:
 
 def _recap(conn, group_id, week_start: date, progress: int, met: bool, cfg):
     """S11 / N5: Monday recap at recap_hour IST. Never shaming."""
-    g = conn.execute("SELECT name FROM groups WHERE id=%s", (group_id,)).fetchone()
+    g = conn.execute("SELECT * FROM groups WHERE id=%s", (group_id,)).fetchone()
     target = cfg["earn"]["household_goal_target"]
     monday = week_start + timedelta(days=7)
     at = datetime(monday.year, monday.month, monday.day, cfg["push"]["recap_hour"], tzinfo=clock.IST)
     from . import i18n
     for uid in experiment.active_member_ids(conn, group_id):
         loc = i18n.locale_of(conn, uid)
-        body = i18n.t(loc, "n5_met" if met else "n5_missed", group=g["name"], progress=progress, target=target)
-        notify.enqueue(conn, cfg, user_id=uid, nid="N5", group_id=group_id, title=g["name"], body=body,
+        name = domain.display_name(conn, g, uid)
+        body = i18n.t(loc, "n5_met" if met else "n5_missed", group=name, progress=progress, target=target)
+        notify.enqueue(conn, cfg, user_id=uid, nid="N5", group_id=group_id, title=name, body=body,
                        dedupe_key=f"N5:{group_id}:{week_start.isoformat()}:{uid}",
                        payload={"group_id": group_id, "route": "household"}, deliver_after=max(at, clock.now()))
 

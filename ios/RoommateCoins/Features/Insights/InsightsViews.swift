@@ -36,7 +36,8 @@ extension Date {
 private let categoryColors: [String: Color] = [
     "rent": Color(hex: 0xF5F5F5), "utilities": Color(hex: 0x6FA8FF), "groceries": Color(hex: 0x06C270),
     "food": Color(hex: 0xFF9F5A), "help": Color(hex: 0xC792EA), "household": Color(hex: 0x8AD4D1),
-    "transport": Color(hex: 0xFFD166), "entertainment": Color(hex: 0xFF7AA2), "other": Color(hex: 0x8A8A8A),
+    "transport": Color(hex: 0xFFD166), "entertainment": Color(hex: 0xFF7AA2), "travel": Color(hex: 0x5AC8FA), "stay": Color(hex: 0xB39DDB),
+    "shopping": Color(hex: 0xF48FB1), "gifts": Color(hex: 0xE57373), "other": Color(hex: 0x8A8A8A),
 ]
 
 struct CategoryBreakdown: View {
@@ -83,18 +84,18 @@ struct TrendChart: View {
             SectionLabel("Last 6 months")
             Chart {
                 ForEach(points) { p in
-                    // side by side, not stacked: your share is part of the flat total
+                    // side by side, not stacked: your share is part of the group total
                     if showTotal, let t = p.total {
                         BarMark(x: .value("Month", p.label), y: .value("Amount", Double(t) / 100))
-                            .foregroundStyle(by: .value("Series", "Whole flat"))
-                            .position(by: .value("Series", "Whole flat"))
+                            .foregroundStyle(by: .value("Series", "Whole group"))
+                            .position(by: .value("Series", "Whole group"))
                     }
                     BarMark(x: .value("Month", p.label), y: .value("Amount", Double(p.myShare) / 100))
                         .foregroundStyle(by: .value("Series", "Your share"))
                         .position(by: .value("Series", "Your share"))
                 }
             }
-            .chartForegroundStyleScale(["Whole flat": Color(hex: 0x4A4A4A), "Your share": Theme.coin])
+            .chartForegroundStyleScale(["Whole group": Color(hex: 0x4A4A4A), "Your share": Theme.coin])
             .chartLegend(.hidden)
             .chartYAxis {
                 AxisMarks(position: .leading) { v in
@@ -105,7 +106,7 @@ struct TrendChart: View {
             .chartXAxis { AxisMarks { _ in AxisValueLabel().foregroundStyle(Theme.muted) } }
             .frame(height: 160)
             HStack(spacing: 14) {
-                if showTotal { legend(Color(hex: 0x4A4A4A), "Whole flat") }
+                if showTotal { legend(Color(hex: 0x4A4A4A), "Whole group") }
                 legend(Theme.coin, "Your share")
             }
         }
@@ -161,7 +162,7 @@ struct GroupInsightsView: View {
 
     private func summary(_ d: GroupInsights) -> some View {
         HStack(spacing: 12) {
-            stat("Flat spent", Format.money(d.totalSpend, d.currency), "\(d.expenseCount) expenses")
+            stat("Group spent", Format.money(d.totalSpend, d.currency), "\(d.expenseCount) expenses")
             stat("Your share", Format.money(d.you?.share ?? 0, d.currency), "\(Int((d.you?.sharePct ?? 0).rounded()))% of total")
         }
     }
@@ -209,7 +210,7 @@ struct GroupInsightsView: View {
                 }
                 .accessibilityElement(children: .combine)
             }
-            Text("Daily average \(Format.money(d.dailyAverage, d.currency)) for the flat").font(Theme.body(12)).foregroundStyle(Theme.muted)
+            Text("Daily average \(Format.money(d.dailyAverage, d.currency)) for the group").font(Theme.body(12)).foregroundStyle(Theme.muted)
         }
         .neoPopCard(depth: 4, padding: 14)
     }

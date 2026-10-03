@@ -15,10 +15,10 @@ struct PhoneEntryView: View {
             Spacer().frame(height: 30)
             HStack(spacing: 10) {
                 CoinGlyph(size: 34)
-                Text("ROOMMATE\nCOINS").font(.system(size: 22, weight: .black)).tracking(2).lineSpacing(-2)
+                Text("SQUARED").font(.system(size: 22, weight: .black)).tracking(2).lineSpacing(-2)
             }
             .onLongPressGesture { showServer = true }
-            Text(sent ? "Enter the code we sent to +91 \(phone)" : "Keep your flat square.\nEarn together.")
+            Text(sent ? "Enter the code we sent to +91 \(phone)" : "Split anything.\nKeep it square. Earn together.")
                 .font(Theme.title(30))
                 .fixedSize(horizontal: false, vertical: true)
             if !sent {
@@ -98,14 +98,14 @@ struct ProfileSetupView: View {
             if !editing { PageBars(count: 2, current: step).padding(.top, 12) }
             if step == 0 {
                 SectionLabel(editing ? "Your profile" : "Almost there")
-                Text("What do your roommates call you?").font(Theme.title(28))
+                Text("What do your friends call you?").font(Theme.title(28))
                 input("Your name", $name, content: .givenName)
                 Text("This is how you'll show up on expenses and confirmations.").font(Theme.body(13)).foregroundStyle(Theme.muted)
             } else {
                 SectionLabel("Optional")
                 Text("Make settling up painless").font(Theme.title(28))
                 input("UPI ID, e.g. \(name.lowercased().filter(\.isLetter))@okbank", $upi, keyboard: .emailAddress)
-                Text("Roommates can pay you in one tap from their UPI app.").font(Theme.body(13)).foregroundStyle(Theme.muted)
+                Text("Friends can pay you in one tap from their UPI app.").font(Theme.body(13)).foregroundStyle(Theme.muted)
                 input("Email", $email, keyboard: .emailAddress, content: .emailAddress)
                 Text("We send voucher codes here when you redeem coins.").font(Theme.body(13)).foregroundStyle(Theme.muted)
             }

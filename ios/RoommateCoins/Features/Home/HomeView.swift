@@ -3,6 +3,8 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppState.self) private var state
     @State private var groups: [GroupSummary] = []
+    @State private var friends: [Friend] = []
+    @State private var showAddFriend = false
     @State private var inbox: [NeedsYouItem] = []
     @State private var inboxUnavailable = false
     @State private var loading = true
@@ -33,6 +35,8 @@ struct HomeView: View {
                         else if !inbox.isEmpty { NeedsYouSection(items: inbox) { Task { await load() } } }
                     }
                     groupsSection
+                    FriendsSection(friends: friends) { showAddFriend = true }
+                    if !groups.isEmpty || !friends.isEmpty { mySpending }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 120)
@@ -41,7 +45,7 @@ struct HomeView: View {
             .background(Theme.bg)
             .routeDestinations()
             .safeAreaInset(edge: .bottom) {
-                NeoPopFloatingButton(title: groups.isEmpty && !loading ? "Set up your flat" : "New flat") {
+                NeoPopFloatingButton(title: groups.isEmpty && !loading ? "Start a group" : "New group") {
                     if groups.isEmpty { state.showFlatSetup = true } else { showCreate = true }
                 }
                     .padding(.horizontal, 20).padding(.bottom, 8)
@@ -52,6 +56,7 @@ struct HomeView: View {
         .onChange(of: state.refreshTick) { Task { await load() } }
         .sheet(isPresented: $showCreate) { CreateGroupSheet { id in Task { await load(); state.open(.group(id)) } } }
         .sheet(isPresented: $showJoin) { PasteInviteSheet() }
+        .sheet(isPresented: $showAddFriend) { AddFriendSheet { id in Task { await load(); state.open(.group(id)) } } }
         .sheet(item: $inviteTarget, onDismiss: { Task { await load() } }) { t in
             InviteSheet(groupId: t.id, groupName: t.name, coinsEnabled: true)
         }
@@ -62,7 +67,7 @@ struct HomeView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 SectionLabel("Hi \(state.user?.name ?? "")")
-                Text("Your flats").font(Theme.title(30))
+                Text("Squared").font(Theme.title(30))
             }
             Spacer()
             if state.coinsLive, let balance = state.balance {
@@ -93,8 +98,8 @@ struct HomeView: View {
             } else if groups.isEmpty {
                 Card {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("No flats yet").font(Theme.body(17, .bold))
-                        Text("Set up your flat in under a minute, or tap the invite link a roommate sent you.")
+                        Text("No groups yet").font(Theme.body(17, .bold))
+                        Text("Start one for your home, a trip, friends or work in under a minute, or open an invite link someone sent you.")
                             .font(Theme.body(14)).foregroundStyle(Theme.muted)
                     }
                 }
@@ -102,28 +107,30 @@ struct HomeView: View {
             ForEach(groups) { g in
                 Button { state.open(.group(g.id)) } label: { GroupRow(group: g) }.buttonStyle(.plain)
             }
-            if !groups.isEmpty {
-                Button { state.open(.mySpending) } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "chart.pie.fill").font(.system(size: 17, weight: .bold)).frame(width: 44, height: 44)
-                            .background(Theme.surfaceHigh)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("My spending").font(Theme.body(16, .bold))
-                            Text("Your share across flats, by category and month").font(Theme.body(12)).foregroundStyle(Theme.muted)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.muted)
-                    }
-                    .padding(14).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
-                }
-                .buttonStyle(.plain)
-            }
         }
+    }
+
+    private var mySpending: some View {
+        Button { state.open(.mySpending) } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "chart.pie.fill").font(.system(size: 17, weight: .bold)).frame(width: 44, height: 44)
+                    .background(Theme.surfaceHigh)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("My spending").font(Theme.body(16, .bold))
+                    Text("Your share across groups and friends, by category and month").font(Theme.body(12)).foregroundStyle(Theme.muted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.muted)
+            }
+            .padding(14).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+        }
+        .buttonStyle(.plain)
     }
 
     private func load() async {
         defer { loading = false }
         if let r: GroupsResponse = try? await APIClient.shared.request("GET", "/groups") { groups = r.groups }
+        if let r: FriendsResponse = try? await APIClient.shared.request("GET", "/friends") { friends = r.friends }
         do {
             let r: NeedsYou = try await APIClient.shared.request("GET", "/me/inbox/needs-you")
             inbox = r.items
@@ -135,8 +142,9 @@ struct HomeView: View {
         if let n: NotificationsResponse = try? await APIClient.shared.request("GET", "/me/notifications") { unread = n.unread ?? 0 }
         await state.refreshActivation()
         await state.refreshCoins(celebrate: false)
-        let owe = groups.map(\.myNetPaise).filter { $0 < 0 }.reduce(0, +)
-        let owed = groups.map(\.myNetPaise).filter { $0 > 0 }.reduce(0, +)
+        let nets = groups.map(\.myNetPaise) + friends.map(\.myNetPaise)
+        let owe = nets.filter { $0 < 0 }.reduce(0, +)
+        let owed = nets.filter { $0 > 0 }.reduce(0, +)
         WidgetSnapshot(name: state.user?.name ?? "", coins: state.coinsLive ? state.balance : nil, youOwe: -owe, youAreOwed: owed,
                        currency: groups.first?.currency ?? "INR", needsYou: inbox.count, updated: Date()).save()
         // a full-screen celebration presented mid pull-to-refresh leaves the refresh control stuck;
@@ -152,7 +160,7 @@ struct GroupRow: View {
     let group: GroupSummary
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: group.groupType == "HOME" ? "house.fill" : "person.3.fill")
+            Image(systemName: GroupKind(group.groupType).icon)
                 .font(.system(size: 18, weight: .bold))
                 .frame(width: 44, height: 44)
                 .background(Theme.surfaceHigh)
@@ -216,7 +224,7 @@ struct NeedsYouExpenseRow: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(expense.createdByName ?? "A roommate") added \(expense.description)").font(Theme.body(15, .bold))
+                    Text("\(expense.createdByName ?? "Someone") added \(expense.description)").font(Theme.body(15, .bold))
                     Text("\(Format.money(expense.amountPaise, expense.currency)) · your share \(Format.money(expense.mySharePaise, expense.currency)) · \(groupName)")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
                 }
@@ -237,7 +245,7 @@ struct NeedsYouPaymentRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(payment.payerName ?? "A roommate") says they paid you \(Format.inr(paise: payment.amountPaise))")
+            Text("\(payment.payerName ?? "Someone") says they paid you \(Format.inr(paise: payment.amountPaise))")
                 .font(Theme.body(15, .bold))
             Text(groupName).font(Theme.body(12)).foregroundStyle(Theme.muted)
             ReceiptBar(payment: payment, reward: reward, onDone: onDone)

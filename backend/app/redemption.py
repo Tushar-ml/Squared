@@ -66,7 +66,7 @@ def send_email(to: str | None, subject: str, body: str) -> None:
         return
     try:
         msg = EmailMessage()
-        msg["From"] = "coins@roommatecoins.local"
+        msg["From"] = "coins@squared.local"
         msg["To"] = to
         msg["Subject"] = subject
         msg.set_content(body)
@@ -180,7 +180,7 @@ def fulfil(redemption_id) -> dict:
         final = conn.execute("SELECT * FROM redemptions WHERE id=%s", (redemption_id,)).fetchone()
     if email_to:
         send_email(email_to, f"Your INR {red['face_value_inr']} {red['brand']} voucher",
-                   f"Here is your voucher code: {code}\n\nThanks for keeping your flat square.")
+                   f"Here is your voucher code: {code}\n\nThanks for keeping things square.")
     return final
 
 

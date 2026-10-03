@@ -11,7 +11,7 @@ CATALOG = [
     ("USER", "QuickCart", "quick commerce", 50, 200, "QC-50"),
     ("USER", "FoodRun", "food delivery", 100, 400, "FR-100"),
     ("USER", "FiberNet", "broadband", 50, 200, "FN-50"),
-    ("GROUP", "Flat Feast", "food delivery", 200, 800, "FF-200-GRP"),
+    ("GROUP", "Group Feast", "food delivery", 200, 800, "FF-200-GRP"),
 ]
 
 # Local dev: every Home group is in treatment and first redemptions are held ~1 minute.

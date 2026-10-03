@@ -21,7 +21,7 @@ struct GroupSettingsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         SectionLabel("Name")
                         HStack {
-                            TextField("Flat name", text: $name).font(Theme.body(18, .bold))
+                            TextField("Group name", text: $name).font(Theme.body(18, .bold))
                                 .padding(12).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
                             NeoPopButton(title: "Save", style: .stroke, enabled: name != d.name && !name.isEmpty, height: 44) {
                                 Task { await patch(["name": name]) }
@@ -65,7 +65,7 @@ struct GroupSettingsView: View {
                             HStack(spacing: 12) {
                                 Avatar(name: m.isYou ? "You" : (m.name ?? "?"), size: 34)
                                 Text(m.isYou ? "You" : (m.name ?? "")).font(Theme.body(15, .semibold))
-                                if m.id == d.createdBy { StatusChip(text: "Created the flat") }
+                                if m.id == d.createdBy { StatusChip(text: "Created the group") }
                                 Spacer()
                                 if d.createdBy == state.user?.id && !m.isYou {
                                     Button { removing = m } label: { Image(systemName: "person.badge.minus").frame(width: 44, height: 44) }
@@ -75,7 +75,7 @@ struct GroupSettingsView: View {
                         }
                         Text("People can leave or be removed once their balance is settled.").font(Theme.body(12)).foregroundStyle(Theme.muted)
                     }
-                    NeoPopButton(title: "Leave flat", style: .flatStroke, height: 44) { confirmLeave = true }
+                    NeoPopButton(title: "Leave group", style: .flatStroke, height: 44) { confirmLeave = true }
                         .padding(.top, 8)
                 } else {
                     Skeleton(height: 200)
@@ -84,7 +84,7 @@ struct GroupSettingsView: View {
             .padding(20)
         }
         .background(Theme.bg)
-        .navigationTitle("Flat settings")
+        .navigationTitle("Group settings")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .onChange(of: simplify) { _, v in if let d = detail, d.simplifyDebts != v { Task { await patch(["simplify_debts": v]) } } }
@@ -94,7 +94,7 @@ struct GroupSettingsView: View {
         .sheet(isPresented: $showInvite) { if let d = detail { InviteSheet(groupId: d.id, groupName: d.name, coinsEnabled: d.coinsEnabled) } }
         .confirmationDialog("Leave \(detail?.name ?? "")?", isPresented: $confirmLeave, titleVisibility: .visible) {
             Button("Leave", role: .destructive) { Task { await remove(state.user?.id ?? 0, leaving: true) } }
-        } message: { Text("You'll stop seeing this flat's expenses. Your coins stay yours.") }
+        } message: { Text("You'll stop seeing this group's expenses. Your coins stay yours.") }
         .confirmationDialog("Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                             titleVisibility: .visible) {
             Button("Remove", role: .destructive) { if let m = removing { Task { await remove(m.id, leaving: false) } } }
@@ -120,7 +120,7 @@ struct GroupSettingsView: View {
         do {
             try await APIClient.shared.raw("DELETE", "/groups/\(groupId)/members/\(uid)")
             state.refreshTick += 1
-            if leaving { state.path = []; state.showToast("You left the flat") } else { await load() }
+            if leaving { state.path = []; state.showToast("You left the group") } else { await load() }
         } catch { state.showToast(error.localizedDescription) }
     }
 }
@@ -271,7 +271,7 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 10) {
                         if messages.isEmpty {
-                            Text("Say hi to the flat. Use this for anything that isn't an expense: plans, reminders, who's buying the cylinder.")
+                            Text("Say hi to the group. Use this for anything that isn't an expense: plans, reminders, who's booking the cab.")
                                 .font(Theme.body(14)).foregroundStyle(Theme.muted).padding(.top, 30)
                         }
                         ForEach(messages) { m in bubble(m).id(m.id) }
@@ -294,7 +294,7 @@ struct ChatView: View {
             .background(Theme.bg)
         }
         .background(Theme.bg)
-        .navigationTitle("Flat chat")
+        .navigationTitle("Group chat")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await load(full: true)

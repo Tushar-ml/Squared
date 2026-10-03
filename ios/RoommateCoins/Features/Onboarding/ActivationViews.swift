@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Home checklist that walks a new user to activation: flat → roommate → expense → confirmed.
+/// Home checklist that walks a new user to activation: group → second person → expense → confirmed.
 /// Server-computed, so it's right on every device. Disappears once the first expense is confirmed.
 struct ActivationChecklist: View {
     @Environment(AppState.self) private var state
@@ -13,7 +13,7 @@ struct ActivationChecklist: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                SectionLabel("Get your flat started", color: Theme.coin)
+                SectionLabel("Get your group started", color: Theme.coin)
                 Spacer()
                 Text("\(activation.doneCount) of \(activation.steps.count)").font(Theme.body(12, .bold)).foregroundStyle(Theme.muted)
             }
@@ -55,25 +55,25 @@ struct ActivationChecklist: View {
     private func hint(_ next: String) -> String {
         let firstWin = activation.firstWinCoins ?? 50
         switch next {
-        case "flat": return "Create your flat or join the one your roommates already use."
+        case "flat": return "Start a group for home, a trip, friends or work, or join one you were invited to."
         case "roommates":
             let want = (activation.group?.expectedMembers ?? 2) - (activation.group?.memberCount ?? 1)
-            return "Invite \(max(want, 1) == 1 ? "a roommate" : "\(max(want, 1)) roommates"). Coins start as soon as one joins."
+            return "Invite \(max(want, 1) == 1 ? "one person" : "\(max(want, 1)) people"). Coins start as soon as one joins."
         case "expense": return "Rent, wifi or groceries: anything you share. Takes 10 seconds."
         default:
-            if activation.confirmExpenseId != nil { return "A roommate added an expense with you in it. Confirm it to earn your first \(firstWin) coins." }
+            if activation.confirmExpenseId != nil { return "Someone added an expense with you in it. Confirm it to earn your first \(firstWin) coins." }
             if reminded { return "Reminder sent to \(waitingNames). You'll both earn \(firstWin) coins the moment they confirm." }
             if activation.waitingExpenseId != nil, !waitingNames.isEmpty {
                 return "Waiting for \(waitingNames) to confirm. A nudge usually does it. You'll both earn your first \(firstWin) coins."
             }
-            return "Waiting for a roommate to confirm. You'll both earn your first \(firstWin) coins."
+            return "Waiting for someone to confirm. You'll both earn your first \(firstWin) coins."
         }
     }
 
     private func ctaTitle(_ next: String) -> String {
         switch next {
-        case "flat": return "Set up flat"
-        case "roommates": return "Invite roommates"
+        case "flat": return "Start a group"
+        case "roommates": return "Invite people"
         case "expense": return "Add an expense"
         default:
             if activation.confirmExpenseId != nil { return "Confirm +\(activation.firstWinCoins ?? 50)" }
@@ -81,7 +81,7 @@ struct ActivationChecklist: View {
                 let first = (activation.waitingOn ?? []).compactMap { $0 }
                 return first.count == 1 ? "Remind \(first[0])" : "Send a reminder"
             }
-            return "Open flat"
+            return "Open group"
         }
     }
 
@@ -117,7 +117,7 @@ struct WelcomeBanner: View {
                 CoinGlyph(size: 30)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Welcome to \(groupName)").font(Theme.body(16, .heavy))
-                    Text("\(expense.createdByName ?? "A roommate") added \(expense.description). Check your share and confirm to earn your first \(firstWin) coins.")
+                    Text("\(expense.createdByName ?? "Someone") added \(expense.description). Check your share and confirm to earn your first \(firstWin) coins.")
                         .font(Theme.body(13)).foregroundStyle(Theme.text.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -138,7 +138,7 @@ struct ActivatedCard: View {
             Image(systemName: "checkmark").font(.system(size: 15, weight: .black)).foregroundStyle(Theme.onAccent)
                 .frame(width: 32, height: 32).background(Theme.owed)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Your flat is set up").font(Theme.body(15, .heavy))
+                Text("Your group is set up").font(Theme.body(15, .heavy))
                 Text("Keep confirming and settling to hit this week's goal together.").font(Theme.body(12)).foregroundStyle(Theme.muted)
             }
             Spacer()

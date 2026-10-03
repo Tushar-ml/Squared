@@ -18,7 +18,7 @@ struct LockScreen: View {
         VStack(spacing: 22) {
             Spacer()
             CoinGlyph(size: 60)
-            Text("Roommate Coins is locked").font(Theme.title(24))
+            Text("Squared is locked").font(Theme.title(24))
             NeoPopButton(title: "Unlock", icon: "faceid") { Task { await unlock() } }.frame(width: 220)
             Spacer()
         }
@@ -30,6 +30,6 @@ struct LockScreen: View {
     }
 
     private func unlock() async {
-        if await AppLock.authenticate(reason: "Unlock Roommate Coins") { state.locked = false }
+        if await AppLock.authenticate(reason: "Unlock Squared") { state.locked = false }
     }
 }

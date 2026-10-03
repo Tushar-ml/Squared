@@ -290,3 +290,45 @@ def test_owed_person_can_remind_once_per_cooldown_in_debtor_language(w):
     w.req("Priya", "POST", f"/groups/{g}/debts/{a}/remind", expect=400)
     w.req("Aman", "POST", f"/groups/{g}/debts/{c}/remind", expect=400)
     w.req("Ravi", "POST", f"/groups/{g}/debts/{b}/remind", expect=400)
+
+
+
+# ---------------------------------------------------------------- friends: 1:1 splits
+
+def test_add_friend_by_phone_makes_one_pair_group_named_after_them(w):
+    a, b = w.user("Aman"), w.user("Priya")
+    w.user("Ravi")
+    priya_phone = w.phones["Priya"]
+    f = w.req("Aman", "POST", "/friends", {"phone": priya_phone})
+    assert f["created"] and f["name"] == "Priya" and f["user_id"] == b
+    again = w.req("Aman", "POST", "/friends", {"phone": priya_phone})
+    assert not again["created"] and again["group_id"] == f["group_id"]
+    back = w.req("Priya", "POST", "/friends", {"phone": w.phones["Aman"]})
+    assert back["group_id"] == f["group_id"] and back["name"] == "Aman"
+    gid = f["group_id"]
+    # each side sees the other's name; friend pairs don't clutter the groups list
+    assert w.req("Aman", "GET", f"/groups/{gid}")["name"] == "Priya"
+    assert w.req("Priya", "GET", f"/groups/{gid}")["name"] == "Aman"
+    assert all(g["id"] != gid for g in w.req("Aman", "GET", "/groups")["groups"])
+    # splitting, coins and balances work like any group
+    e = w.expense("Aman", gid, 600)
+    w.confirm("Priya", e)
+    fr = w.req("Aman", "GET", "/friends")["friends"]
+    assert len(fr) == 1 and fr[0]["name"] == "Priya" and fr[0]["my_net_paise"] == 30000 and fr[0]["coins_enabled"]
+    w.req("Aman", "POST", "/friends", {"phone": w.phones["Aman"]}, expect=400)
+    w.req("Aman", "POST", "/friends", {"phone": "+919111111111"}, expect=404)
+    _ = a
+
+
+def test_friend_invite_link_pairs_new_person_once(w):
+    w.user("Aman"); w.user("Priya"); w.user("Ravi")
+    inv = w.req("Aman", "POST", "/friends/invite")
+    assert "Squared" in inv["message"] and "Join me" in inv["message"]
+    assert w.req("Aman", "GET", "/friends")["friends"] == []        # not shown until they join
+    j = w.req("Priya", "POST", "/invites/accept", {"token": inv["token"]})
+    assert j["group_id"] == inv["group_id"] and j["group_name"] == "Aman"
+    assert [f["name"] for f in w.req("Aman", "GET", "/friends")["friends"]] == ["Priya"]
+    w.req("Ravi", "POST", "/invites/accept", {"token": inv["token"]}, expect=400)   # link is for one person
+    # a second link between the same two people lands on the existing pair
+    inv2 = w.req("Aman", "POST", "/friends/invite")
+    assert w.req("Priya", "POST", "/invites/accept", {"token": inv2["token"]})["group_id"] == inv["group_id"]

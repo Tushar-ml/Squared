@@ -9,16 +9,17 @@ from conftest import all_integrity_ok, set_config
 
 # ---------------------------------------------------------------- FR-1 eligibility & kill switch
 
-def test_control_solo_and_non_home_groups_have_no_coin_ui(w):
+def test_every_group_type_earns_but_control_and_solo_have_no_coin_ui(w):
     w.user("Rahul"); w.user("Priya")
     solo = w.flat("Rahul")
     assert w.req("Rahul", "GET", f"/groups/{solo}")["coins_enabled"] is False
-    trip = w.flat("Rahul", "Priya", group_type="TRIP", name="Goa")
-    detail = w.req("Rahul", "GET", f"/groups/{trip}")
-    assert detail["coins_enabled"] is False and detail["arm"] is None
-    e = w.expense("Rahul", trip, 500)
-    assert "confirmation" not in w.req("Priya", "GET", f"/expenses/{e}")
-    w.confirm("Priya", e, expect=409)
+    for kind in ("TRIP", "COUPLE", "FRIENDS", "WORK", "EVENT", "OTHER"):
+        g = w.flat("Rahul", "Priya", group_type=kind, name=kind.title())
+        assert w.req("Rahul", "GET", f"/groups/{g}")["coins_enabled"] is True, kind
+    w.req("Rahul", "POST", "/groups", {"name": "x", "group_type": "DIRECT"}, expect=400)  # only via /friends
+    w.drain()
+    with db.tx() as c:
+        c.execute("DELETE FROM notifications")
     set_config({"experiment": {"treatment_share": 0.0}})
     ctrl = w.flat("Rahul", "Priya", name="Control flat")
     d = w.req("Rahul", "GET", f"/groups/{ctrl}")

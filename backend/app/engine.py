@@ -154,7 +154,7 @@ def on_expense_created(conn, ev, cfg):
     if not ok:
         return
     names = domain.user_names(conn, [e["created_by"]] + [s["user_id"] for s in e["splits"]])
-    adder = names.get(e["created_by"], "A roommate")
+    adder = names.get(e["created_by"], "Someone")
     shares = {s["user_id"]: s["share_paise"] for s in e["splits"]}
     for uid in sorted(domain.participants(e) - {e["created_by"]}):
         share = shares.get(uid, 0)
@@ -283,7 +283,7 @@ def on_expense_disputed(conn, ev, cfg):
     if not ok:
         return
     goals.refresh_progress(conn, e["group_id"], cfg)
-    who = domain.user_names(conn, [ev["user_id"]]).get(ev["user_id"], "A roommate")
+    who = domain.user_names(conn, [ev["user_id"]]).get(ev["user_id"], "Someone")
     loc = i18n.locale_of(conn, e["created_by"])
     notify.enqueue(conn, cfg, user_id=e["created_by"], nid="N9", group_id=e["group_id"], title=i18n.t(loc, "dispute_title"),
                    body=i18n.t(loc, "dispute_body", name=who, desc=e["description"]),
@@ -315,7 +315,7 @@ def on_payment_recorded(conn, ev, cfg):
     p = conn.execute("SELECT * FROM payments WHERE id=%s", (ev["payment_id"],)).fetchone()
     if not p or p["deleted_at"] or not experiment.eligibility(conn, p["group_id"], cfg)[0]:
         return
-    payer = domain.user_names(conn, [p["payer_id"]]).get(p["payer_id"], "A roommate")
+    payer = domain.user_names(conn, [p["payer_id"]]).get(p["payer_id"], "Someone")
     loc = i18n.locale_of(conn, p["receiver_id"])
     notify.enqueue(conn, cfg, user_id=p["receiver_id"], nid="N2", group_id=p["group_id"], title=i18n.t(loc, "n2_title"),
                    body=i18n.t(loc, "n2_body", payer=payer, amount=fx.fmt(p["amount_paise"], _group_currency(conn, p["group_id"]))),
@@ -326,7 +326,7 @@ def on_payment_rejected(conn, ev, cfg):
     p = conn.execute("SELECT * FROM payments WHERE id=%s", (ev["payment_id"],)).fetchone()
     if not p or not experiment.eligibility(conn, p["group_id"], cfg)[0]:
         return
-    rec = domain.user_names(conn, [p["receiver_id"]]).get(p["receiver_id"], "Your roommate")
+    rec = domain.user_names(conn, [p["receiver_id"]]).get(p["receiver_id"], "They")
     loc = i18n.locale_of(conn, p["payer_id"])
     notify.enqueue(conn, cfg, user_id=p["payer_id"], nid="N9", group_id=p["group_id"], title=i18n.t(loc, "reject_title"),
                    body=i18n.t(loc, "reject_body", name=rec), dedupe_key=f"N9:reject:{p['id']}",
@@ -406,12 +406,12 @@ def on_member_joined(conn, ev, cfg):
     if ev.get("referral_id"):
         ref = conn.execute("SELECT * FROM referrals WHERE id=%s", (ev["referral_id"],)).fetchone()
         if ref:
-            g = conn.execute("SELECT name FROM groups WHERE id=%s", (gid,)).fetchone()
-            who = domain.user_names(conn, [ev["user_id"]]).get(ev["user_id"], "A roommate")
+            g = conn.execute("SELECT * FROM groups WHERE id=%s", (gid,)).fetchone()
+            who = domain.user_names(conn, [ev["user_id"]]).get(ev["user_id"], "Someone")
             if experiment.eligibility(conn, gid, cfg)[0]:
                 loc = i18n.locale_of(conn, ref["inviter_id"])
                 notify.enqueue(conn, cfg, user_id=ref["inviter_id"], nid="N8", group_id=gid, title=i18n.t(loc, "n8_title"),
-                               body=i18n.t(loc, "n8_body", name=who, group=g["name"]), dedupe_key=f"N8:{ref['id']}",
+                               body=i18n.t(loc, "n8_body", name=who, group=domain.display_name(conn, g, ref["inviter_id"])), dedupe_key=f"N8:{ref['id']}",
                                payload={"group_id": gid})
             analytics.track(conn, "invite_joined", user_id=ev["user_id"], group_id=gid,
                             arm=experiment.arm_of(conn, gid, cfg), config_version=cfg.version, channel="link")

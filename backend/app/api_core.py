@@ -125,6 +125,9 @@ def patch_me(body: MePatch, user=Depends(current_user)):
 
 # ---------------------------------------------------------------- groups
 
+GROUP_TYPES = ("HOME", "TRIP", "COUPLE", "FRIENDS", "WORK", "EVENT", "OTHER")  # DIRECT is made via /friends
+
+
 class GroupCreate(BaseModel):
     name: str = Field(min_length=1, max_length=60)
     group_type: str = "HOME"
@@ -135,7 +138,7 @@ class GroupCreate(BaseModel):
 def _group_summary(conn, g, user_id, cfg):
     members = experiment.active_member_ids(conn, g["id"])
     net = domain.user_net(conn, g["id"]).get(user_id, 0)
-    return {"id": g["id"], "name": g["name"], "group_type": g["group_type"], "currency": g["currency"], "member_count": len(members),
+    return {"id": g["id"], "name": domain.display_name(conn, g, user_id), "group_type": g["group_type"], "currency": g["currency"], "member_count": len(members),
             "my_net_paise": net, "coins_enabled": views.eligible(conn, g["id"], cfg)}
 
 
@@ -145,13 +148,14 @@ def list_groups(user=Depends(current_user)):
         cfg = coin_config.current(conn)
         gs = conn.execute(
             """SELECT g.* FROM groups g JOIN group_members m ON m.group_id=g.id
-               WHERE m.user_id=%s AND m.left_at IS NULL ORDER BY g.created_at DESC""", (user["id"],)).fetchall()
+               WHERE m.user_id=%s AND m.left_at IS NULL AND g.group_type <> 'DIRECT'
+               ORDER BY g.created_at DESC""", (user["id"],)).fetchall()
         return {"groups": [_group_summary(conn, g, user["id"], cfg) for g in gs]}
 
 
 @router.post("/groups")
 def create_group(body: GroupCreate, user=Depends(current_user)):
-    if body.group_type not in ("HOME", "TRIP", "COUPLE", "OTHER"):
+    if body.group_type not in GROUP_TYPES:
         raise HTTPException(400, "Unknown group type")
     if body.currency.upper() not in fx.SUPPORTED:
         raise HTTPException(400, "Unsupported currency")
@@ -206,7 +210,8 @@ def group_detail(group_id: int, user=Depends(current_user)):
                 item["reminded_at"] = last.isoformat() if last else None
             my_debts.append(item)
         return {
-            "id": g["id"], "name": g["name"], "group_type": g["group_type"], "expected_members": g["expected_members"],
+            "id": g["id"], "name": domain.display_name(conn, g, user["id"]), "group_type": g["group_type"],
+            "expected_members": g["expected_members"],
             "currency": g["currency"], "simplify_debts": g["simplify_debts"], "default_split": g["default_split"],
             "created_by": g["created_by"],
             "arm": views.safe(conn, experiment.arm_of, conn, group_id, cfg),
@@ -435,7 +440,7 @@ def record_payment(group_id: int, body: PaymentIn, user=Depends(current_user)):
     with db.tx() as conn:
         require_member(conn, group_id, user["id"])
         if body.receiver_id == user["id"] or body.receiver_id not in experiment.active_member_ids(conn, group_id):
-            raise HTTPException(400, "Pick a roommate to pay")
+            raise HTTPException(400, "Pick who to pay")
         p = conn.execute(
             """INSERT INTO payments (group_id, payer_id, receiver_id, amount_paise, note, created_at)
                VALUES (%s,%s,%s,%s,%s,%s) RETURNING *""",

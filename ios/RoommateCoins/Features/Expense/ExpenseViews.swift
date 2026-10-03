@@ -99,7 +99,7 @@ struct ExpenseDetailView: View {
                         .font(Theme.body(12)).foregroundStyle(Theme.coin)
                 }
             } else if c.status == "DISPUTED" && e.createdBy == state.user?.id {
-                Text("Edit the amount, payer or split and your roommates can confirm again.")
+                Text("Edit the amount, payer or split and others can confirm again.")
                     .font(Theme.body(13)).foregroundStyle(Theme.muted)
             }
         }

@@ -188,13 +188,13 @@ struct RedeemView: View {
                     if !pots.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             if pots.count > 1 {
-                                Picker("Household", selection: $potGroup) {
+                                Picker("Group", selection: $potGroup) {
                                     ForEach(pots, id: \.groupId) { Text($0.groupName).tag(Optional($0.groupId)) }
                                 }.pickerStyle(.segmented)
                             }
                             if let pb = c.potBalance { Text("Shared pot: \(pb) coins").font(Theme.body(13, .semibold)).foregroundStyle(Theme.coin) }
                         }
-                        section("Household", items: c.items.filter { $0.scope == "GROUP" })
+                        section("Group pot", items: c.items.filter { $0.scope == "GROUP" })
                     }
                     if !history.isEmpty { historySection }
                 } else if let error {
@@ -264,7 +264,7 @@ struct RedeemView: View {
         VStack(alignment: .leading, spacing: 16) {
             SectionLabel(item.scope == "GROUP" ? "From the shared pot" : "Redeem")
             Text("Spend \(item.coinCost) coins for an INR \(item.faceValueInr) voucher?").font(Theme.title(24))
-            Text(item.brand + (item.scope == "GROUP" ? " · everyone in the flat will see who redeemed it" : ""))
+            Text(item.brand + (item.scope == "GROUP" ? " · everyone in the group will see who redeemed it" : ""))
                 .font(Theme.body(14)).foregroundStyle(Theme.muted)
             NeoPopButton(title: "Spend \(item.coinCost) coins", style: .elevatedCoin, enabled: !busy, loading: busy) {
                 Task { await redeem(item) }

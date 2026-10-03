@@ -98,7 +98,7 @@ enum Format {
 
     static func names(_ list: [String]) -> String {
         switch list.count {
-        case 0: return "a roommate"
+        case 0: return "someone"
         case 1: return list[0]
         case 2: return "\(list[0]) or \(list[1])"
         default: return list.dropLast().joined(separator: ", ") + " or " + list.last!

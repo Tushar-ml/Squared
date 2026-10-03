@@ -30,8 +30,8 @@ struct GroupView: View {
                             if let last = h.lastWeek, [2, 3].contains(Calendar.current.component(.weekday, from: Date())) {
                                 RecapCard(groupName: d.name, last: last, target: h.target)
                             }
-                            HouseholdCard(groupName: d.name, h: h, collapsed: $cardCollapsed,
-                                          noExpenses: d.expenses.isEmpty) { showInvite = true }
+                            HouseholdCard(groupName: d.name, h: h, collapsed: $cardCollapsed, noExpenses: d.expenses.isEmpty,
+                                          onInvite: GroupKind(d.groupType) == .direct ? nil : { showInvite = true })
                         } else if householdUnavailable {
                             CoinsUnavailable()
                         } else {
@@ -83,11 +83,16 @@ struct GroupView: View {
     private func header(_ d: GroupDetail) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(d.name).font(Theme.title(30))
+            if GroupKind(d.groupType) == .direct {
+                Label("Just you and \(d.name)", systemImage: "person.2.fill").font(Theme.body(13, .semibold)).foregroundStyle(Theme.muted)
+            }
             HStack(spacing: 10) {
                 BalanceText(net: d.myNetPaise, currency: d.currency)
                 Spacer()
-                NeoPopButton(title: "Invite", style: .stroke, icon: "person.badge.plus", height: 38) { showInvite = true }
-                    .frame(width: 120)
+                if GroupKind(d.groupType) != .direct {
+                    NeoPopButton(title: "Invite", style: .stroke, icon: "person.badge.plus", height: 38) { showInvite = true }
+                        .frame(width: 120)
+                }
             }
         }
         .padding(.top, 8)
@@ -100,7 +105,7 @@ struct GroupView: View {
                 tool("Recurring", "repeat", .recurring(d.id))
                 tool("Search", "magnifyingglass", .search(d.id))
                 tool("Chat", "bubble.left.and.bubble.right", .chat(d.id))
-                tool("Settings", "gearshape", .groupSettings(d.id))
+                if GroupKind(d.groupType) != .direct { tool("Settings", "gearshape", .groupSettings(d.id)) }
             }
         }
     }
@@ -151,7 +156,7 @@ struct GroupView: View {
         }
     }
 
-    /// Lets the person who is owed nudge a roommate to settle. The server allows one per pair per day.
+    /// Lets the person who is owed nudge someone to settle. The server allows one per pair per day.
     @ViewBuilder
     private func remindButton(_ debt: Debt) -> some View {
         if let at = Format.date(debt.remindedAt), Date().timeIntervalSince(at) < 24 * 3600 {
@@ -254,7 +259,7 @@ struct HouseholdCard: View {
     let h: Household
     @Binding var collapsed: Bool
     let noExpenses: Bool
-    let onInvite: () -> Void
+    var onInvite: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -268,7 +273,7 @@ struct HouseholdCard: View {
                 .frame(minHeight: 28)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(collapsed ? "Expand household card" : "Collapse household card")
+            .accessibilityLabel(collapsed ? "Expand weekly goal card" : "Collapse weekly goal card")
             HStack(spacing: 16) {
                 ProgressRing(progress: h.progress, target: h.target, met: h.goalMet)
                 VStack(alignment: .leading, spacing: 4) {
@@ -291,15 +296,17 @@ struct HouseholdCard: View {
                     ForEach(h.members, id: \.userId) { m in
                         Avatar(name: m.isYou ? "You" : (m.name ?? "?"), tick: m.confirmedThisWeek, size: 34)
                     }
-                    Button(action: onInvite) {
-                        Label("Invite", systemImage: "plus").font(Theme.body(13, .bold))
-                            .padding(.horizontal, 10).frame(height: 34)
-                            .overlay(Rectangle().stroke(h.inviteSuggested ? Theme.coin : Theme.line))
+                    if let onInvite {
+                        Button(action: onInvite) {
+                            Label("Invite", systemImage: "plus").font(Theme.body(13, .bold))
+                                .padding(.horizontal, 10).frame(height: 34)
+                                .overlay(Rectangle().stroke(h.inviteSuggested ? Theme.coin : Theme.line))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
                 if !h.potRedemptions.isEmpty, let r = h.potRedemptions.first {
-                    Text("\(r.redeemedBy ?? "A roommate") redeemed a \(r.brand) INR \(r.faceValueInr) voucher from the pot")
+                    Text("\(r.redeemedBy ?? "Someone") redeemed a \(r.brand) INR \(r.faceValueInr) voucher from the pot")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
                 }
                 HStack(spacing: 18) {
@@ -347,7 +354,7 @@ struct RecapCard: View {
                 SectionLabel("Last week")
                 Text(last.status == "MET"
                      ? "Last week \(groupName) confirmed \(last.progress) expenses and hit the goal. This week's goal: \(target)."
-                     : "Last week was quiet. This week's goal: \(target). A roommate can confirm in one tap.")
+                     : "Last week was quiet. This week's goal: \(target). Anyone can confirm in one tap.")
                     .font(Theme.body(14))
             }
         }
@@ -461,7 +468,7 @@ struct RecapCardView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 CoinGlyph(size: 26)
-                Text("ROOMMATE COINS").font(.system(size: 12, weight: .black)).tracking(1.6).foregroundStyle(.white)
+                Text("SQUARED").font(.system(size: 12, weight: .black)).tracking(1.6).foregroundStyle(.white)
                 Spacer()
             }
             Text(groupName).font(.system(size: 30, weight: .heavy)).foregroundStyle(.white)
@@ -477,7 +484,7 @@ struct RecapCardView: View {
             HStack(spacing: 8) {
                 ForEach(h.members, id: \.userId) { m in Avatar(name: m.name ?? "?", tick: m.confirmedThisWeek, size: 34) }
             }
-            Text("Keeping the flat square, together.").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: 0xF5B301))
+            Text("Keeping it square, together.").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: 0xF5B301))
         }
         .padding(24)
         .frame(width: 360, alignment: .leading)

@@ -16,8 +16,8 @@ struct InviteSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     SectionLabel("Invite to \(groupName)")
-                    Text(coinsEnabled ? "Bring your roommates in. When their first expense is confirmed, you both get +\(state.config?.earn.inviteEach ?? 50)."
-                                      : "Bring your roommates in.")
+                    Text(coinsEnabled ? "Bring people in. When their first expense is confirmed, you both get +\(state.config?.earn.inviteEach ?? 50)."
+                                      : "Bring people in.")
                         .font(Theme.title(22))
                     if let invite {
                         Text(invite.message).font(Theme.body(14))
@@ -89,10 +89,10 @@ struct JoinGroupSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionLabel("You're invited")
-            Text("Join your roommates' flat?").font(Theme.title(26))
+            Text("Join this group?").font(Theme.title(26))
             Text("You'll see shared expenses and can confirm them in one tap.").font(Theme.body(14)).foregroundStyle(Theme.muted)
             if let error { Text(error).font(Theme.body(13)).foregroundStyle(Theme.owe) }
-            NeoPopButton(title: "Join flat", enabled: !busy) { Task { await join() } }
+            NeoPopButton(title: "Join", enabled: !busy) { Task { await join() } }
             NeoPopButton(title: "Not now", style: .stroke) { state.pendingJoinToken = nil; dismiss() }
             Spacer(minLength: 0)
         }
@@ -152,7 +152,7 @@ struct CreateGroupSheet: View {
     @Environment(AppState.self) private var state
     let onCreated: (Int) -> Void
     @State private var name = ""
-    @State private var type = "HOME"
+    @State private var kind: GroupKind = .home
     @State private var people = 3
     @State private var busy = false
     @State private var currency = "INR"
@@ -161,13 +161,11 @@ struct CreateGroupSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionLabel("New group")
-            TextField("Flat 4B", text: $name).font(Theme.body(22, .bold))
+            KindPicker(selected: $kind)
+            TextField(kind.namePlaceholder, text: $name).font(Theme.body(22, .bold))
                 .padding(14).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
-            NeoPopRadioRow(label: "Home (flatmates)", selected: type == "HOME") { type = "HOME" }
-            NeoPopRadioRow(label: "Trip", selected: type == "TRIP") { type = "TRIP" }
-            NeoPopRadioRow(label: "Other", selected: type == "OTHER") { type = "OTHER" }
-            if type == "HOME" {
-                Stepper("People living here: \(people)", value: $people, in: 2...8).font(Theme.body(15, .semibold))
+            if kind.fixedSize == nil {
+                Stepper("People, including you: \(people)", value: $people, in: 2...20).font(Theme.body(15, .semibold))
             }
             Button { showCurrency = true } label: {
                 HStack {
@@ -185,7 +183,7 @@ struct CreateGroupSheet: View {
             Spacer()
         }
         .padding(24)
-        .presentationDetents([.height(520)])
+        .presentationDetents([.height(560)])
         .presentationBackground(Theme.bg)
         .sheet(isPresented: $showCurrency) { CurrencyPicker(selected: currency, reference: "INR") { currency = $0 } }
     }
@@ -195,7 +193,7 @@ struct CreateGroupSheet: View {
         defer { busy = false }
         do {
             let g: GroupSummary = try await APIClient.shared.request("POST", "/groups", body: [
-                "name": name, "group_type": type, "expected_members": type == "HOME" ? people : nil, "currency": currency])
+                "name": name, "group_type": kind.rawValue, "expected_members": kind.fixedSize ?? people, "currency": currency])
             dismiss()
             onCreated(g.id)
         } catch { state.showToast(error.localizedDescription) }
