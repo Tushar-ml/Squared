@@ -8,3 +8,4 @@ ios/*.xcodeproj/xcuserdata/
 DerivedData/
 backend/uploads/
 .DS_Store
+backend/.env.dev
