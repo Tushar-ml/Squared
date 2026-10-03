@@ -232,7 +232,8 @@ extension View {
         self.padding(padding)
             .padding(.trailing, depth).padding(.bottom, depth)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(NeoPopSurface(color: color, edge: edge, depth: depth))
+            .background(NeoPopSurface(color: color, edge: edge, depth: depth).allowsHitTesting(false))
+            .contentShape(Rectangle())
     }
 }
 
