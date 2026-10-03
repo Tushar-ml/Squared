@@ -92,6 +92,7 @@ final class AppState {
             await refreshCoins()
             await refreshActivation()
             OfflineQueue.shared.flush()
+            NotificationManager.shared.requestAuthorization()   // no-op once the user has decided
         } catch let e as APIError where e.status == 401 {
             signOut(local: true)
         } catch {}
