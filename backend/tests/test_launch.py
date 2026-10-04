@@ -130,6 +130,7 @@ def _prod(**env):
     s.surprise_secret = s.invite_secret = s.voucher_key = s.otp_secret = "x" * 32
     s.public_base_url = "https://api.squared.example"
     s.storage_backend, s.s3_bucket = "s3", "squared-bills"
+    s.support_email, s.apple_team_id = "help@squared.example", "ABCDE12345"
     for k, v in env.items():
         setattr(s, k, v)
     return s
@@ -180,3 +181,26 @@ def test_bill_photos_round_trip_through_s3(w):
             assert s3.list_objects_v2(Bucket="squared-bills").get("KeyCount") == 0
         finally:
             storage.use(None)
+
+
+# ---------------------------------------------------------------- public pages
+
+def test_legal_and_support_pages_render(client, monkeypatch):
+    from app import api_coins
+    monkeypatch.setattr(api_coins.settings, "support_email", "help@squared.example")
+    for path, must in [("/legal/terms", "no cash value"), ("/legal/privacy", "Digital Personal Data Protection Act"),
+                       ("/support", "Delete your account")]:
+        r = client.get(path)
+        assert r.status_code == 200 and must in r.text and "help@squared.example" in r.text, path
+        assert "{" not in r.text.split("<main>")[1].split("<footer>")[0], path   # every placeholder filled
+
+
+def test_universal_links_file(client, monkeypatch):
+    from app import api_coins
+    monkeypatch.setattr(api_coins.settings, "apple_team_id", "")
+    assert client.get("/.well-known/apple-app-site-association").status_code == 404
+    monkeypatch.setattr(api_coins.settings, "apple_team_id", "ABCDE12345")
+    r = client.get("/.well-known/apple-app-site-association")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
+    d = r.json()["applinks"]["details"][0]
+    assert d["appIDs"] == ["ABCDE12345.app.squared.ios"] and d["components"] == [{"/": "/j/*"}]

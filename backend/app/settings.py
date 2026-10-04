@@ -13,7 +13,11 @@ class Settings:
     storage_backend = os.getenv("STORAGE_BACKEND", "local")   # "local" or "s3" (S3, Cloudflare R2, MinIO)
     s3_bucket = os.getenv("S3_BUCKET", "")
     s3_endpoint_url = os.getenv("S3_ENDPOINT_URL", "")         # e.g. https://<account>.r2.cloudflarestorage.com
-    s3_region = os.getenv("S3_REGION", "")   # read the client IP from X-Forwarded-For (behind a load balancer)
+    s3_region = os.getenv("S3_REGION", "")
+    apple_team_id = os.getenv("APPLE_TEAM_ID", "")          # for Universal Links (apple-app-site-association)
+    ios_bundle_id = os.getenv("IOS_BUNDLE_ID", "app.squared.ios")
+    support_email = os.getenv("SUPPORT_EMAIL", "")          # shown on the legal and support pages
+    operator_name = os.getenv("OPERATOR_NAME", "Squared")   # read the client IP from X-Forwarded-For (behind a load balancer)
     vendor_url = os.getenv("VENDOR_URL", "http://localhost:8090")
     vendor_timeout = float(os.getenv("VENDOR_TIMEOUT_SECONDS", "3"))
     smtp_host = os.getenv("SMTP_HOST", "")
@@ -40,6 +44,10 @@ class Settings:
             out.append("PUBLIC_BASE_URL must use https")
         if self.storage_backend != "s3" or not self.s3_bucket:
             out.append("STORAGE_BACKEND=s3 and S3_BUCKET are required: local disk doesn't survive deploys")
+        if not self.support_email:
+            out.append("SUPPORT_EMAIL is required: the privacy policy must give a contact for data requests")
+        if not self.apple_team_id:
+            out.append("APPLE_TEAM_ID is required so invite links open the app (Universal Links)")
         return out
 
     def assert_safe_for_production(self) -> None:

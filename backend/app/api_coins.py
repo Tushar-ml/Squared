@@ -3,11 +3,12 @@ import base64
 import hashlib
 import hmac
 import json
+import pathlib
 import uuid
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from . import analytics, clock, coin_config, db, domain, events, experiment, goals, ledger, notify, redemption, views
@@ -650,3 +651,59 @@ def invite_landing(token: str):
 <h2>You're invited to split on Squared</h2><p>Open the app to join and start earning coins together.</p>
 <a href="{app}" style="display:inline-block;background:#fff;color:#000;padding:14px 22px;font-weight:700;text-decoration:none">OPEN APP</a>
 <script>location.href="{app}"</script></body>"""
+
+
+# ---------------------------------------------------------------- public pages: legal, support, Universal Links
+
+LEGAL = pathlib.Path(__file__).parent / "static" / "legal"
+LEGAL_UPDATED = "4 October 2026"
+
+
+def _page(title: str, body: str) -> str:
+    return f"""<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} · Squared</title>
+<style>
+:root{{--bg:#fff;--fg:#0d0d0d;--muted:#6b6b6b;--line:#ddd;--note:#fff4d6}}
+@media (prefers-color-scheme:dark){{:root{{--bg:#0d0d0d;--fg:#f5f5f5;--muted:#9a9a9a;--line:#2a2a2a;--note:#3a2f10}}}}
+body{{background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,system-ui,sans-serif;margin:0;padding:32px 16px}}
+main{{max-width:680px;margin:0 auto}} h1{{font-size:30px;margin:0 0 8px}} h2{{font-size:19px;margin:28px 0 8px}}
+a{{color:inherit}} li{{margin:6px 0}} .draft{{background:var(--note);padding:10px 12px;border:1px solid var(--line)}}
+footer{{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}}
+</style><main>{body}<footer><a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> ·
+<a href="/support">Support</a></footer></main></html>"""
+
+
+def _legal(name: str) -> str:
+    cfg = coin_config.DEFAULT_CONFIG
+    email = settings.support_email or "support@example.com"
+    return (LEGAL / f"{name}.html").read_text().format(
+        updated=LEGAL_UPDATED, operator=settings.operator_name, email=email, expiry_months=cfg["expiry_months"])
+
+
+@landing.get("/legal/terms", response_class=HTMLResponse)
+def terms_page():
+    return _page("Terms of use", _legal("terms"))
+
+
+@landing.get("/legal/privacy", response_class=HTMLResponse)
+def privacy_page():
+    return _page("Privacy policy", _legal("privacy"))
+
+
+@landing.get("/support", response_class=HTMLResponse)
+def support_page():
+    email = settings.support_email or "support@example.com"
+    return _page("Support", f"""<h1>Support</h1>
+<p>Questions, a bug, or a request about your data? Email <a href="mailto:{email}">{email}</a> and we'll get back
+to you within 2 working days.</p>
+<h2>Delete your account</h2><p>In the app: <em>Account → Delete account</em>. Settle any open balances first.</p>
+<h2>Coins</h2><p>Coins are a loyalty reward with no cash value. Redeeming them for vouchers is coming soon.</p>""")
+
+
+@landing.get("/.well-known/apple-app-site-association")
+def apple_app_site_association():
+    """Lets iOS open https://<domain>/j/<token> invite links straight in the app."""
+    if not settings.apple_team_id:
+        raise HTTPException(404, "Not configured")
+    app_id = f"{settings.apple_team_id}.{settings.ios_bundle_id}"
+    return JSONResponse({"applinks": {"details": [{"appIDs": [app_id], "components": [{"/": "/j/*"}]}]}})
