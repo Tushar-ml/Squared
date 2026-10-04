@@ -571,7 +571,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.squared.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios.widget;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.10;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -590,7 +590,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.squared;
+				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -675,7 +675,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.squared;
+				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -691,7 +691,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.SquaredTests;
+				PRODUCT_BUNDLE_IDENTIFIER = app.squared.SquaredTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Squared.app/Squared";
@@ -768,7 +768,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.squared.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios.widget;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.10;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -785,7 +785,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplismart.SquaredTests;
+				PRODUCT_BUNDLE_IDENTIFIER = app.squared.SquaredTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Squared.app/Squared";

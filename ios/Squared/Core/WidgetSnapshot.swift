@@ -11,7 +11,7 @@ struct WidgetSnapshot: Codable {
     var needsYou: Int
     var updated: Date
 
-    static let appGroup = "group.tech.simplismart.squared"
+    static let appGroup = "group.app.squared.ios"
     static let key = "widgetSnapshot.v1"
 
     static func load() -> WidgetSnapshot? {

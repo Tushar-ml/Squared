@@ -228,7 +228,7 @@ final class AppState {
 }
 
 enum Keychain {
-    private static let service = "tech.simplismart.squared"
+    private static let service = "app.squared.ios"
 
     static func save(_ key: String, _ value: String) {
         delete(key)

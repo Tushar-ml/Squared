@@ -1,7 +1,7 @@
 #!/bin/sh
 # Headless simulator helpers: sim.sh install | launch [args...] | open <url> | shot <name>
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-DEV="${SIM_DEVICE:-iPhone 17 Pro}"; APP=tech.simplismart.squared
+DEV="${SIM_DEVICE:-iPhone 17 Pro}"; APP=app.squared.ios
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 case "$1" in
   install) xcrun simctl install "$DEV" "$ROOT/ios/build/Build/Products/Debug-iphonesimulator/Squared.app" ;;

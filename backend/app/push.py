@@ -12,7 +12,7 @@ log = logging.getLogger("push")
 KEY_ID = os.getenv("APNS_KEY_ID", "")
 TEAM_ID = os.getenv("APNS_TEAM_ID", "")
 KEY_PATH = os.getenv("APNS_KEY_PATH", "")        # path to the AuthKey_XXXX.p8 file
-TOPIC = os.getenv("APNS_TOPIC", "tech.simplismart.squared")
+TOPIC = os.getenv("APNS_TOPIC", "app.squared.ios")
 HOST = "https://api.sandbox.push.apple.com" if os.getenv("APNS_SANDBOX", "1") == "1" else "https://api.push.apple.com"
 _jwt = (0.0, "")
 
