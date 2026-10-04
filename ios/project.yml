@@ -19,16 +19,17 @@ targets:
   Squared:
     type: application
     platform: iOS
+    supportedDestinations: [iOS, macCatalyst]
     sources:
       - path: Squared
     dependencies:
       - package: NeoPop
       - target: SquaredWidget
+        destinationFilters: [iOS]
     entitlements:
       path: Squared/Resources/Squared.entitlements
       properties:
         com.apple.security.application-groups: [group.app.squared.ios]
-        com.apple.developer.associated-domains: ["applinks:$(SQUARED_LINK_DOMAIN)"]
     info:
       path: Squared/Resources/Info.plist
       properties:
@@ -41,8 +42,6 @@ targets:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
         CFBundleURLTypes:
           - CFBundleURLName: app.squared.ios
             CFBundleURLSchemes: [squared]
@@ -50,32 +49,14 @@ targets:
         NSLocalNetworkUsageDescription: Squared finds friends' phones nearby to sync shared groups directly, without the internet.
         NSBluetoothAlwaysUsageDescription: Squared uses Bluetooth to sync shared groups with friends' phones nearby.
         NSBonjourServices: [_sqd-sync._tcp, _sqd-sync._udp]
-        RCAPIBaseURL: $(SQUARED_API_BASE_URL)
     settings:
-      configs:
-        # Set the production values once the domain is decided (docs/PRODUCTION.md, D4).
-        # Release builds refuse to finish while they still say CHANGE-ME.
-        Debug:
-          SQUARED_API_BASE_URL: http://localhost:8080
-          SQUARED_LINK_DOMAIN: localhost
-        Release:
-          SQUARED_API_BASE_URL: https://api.CHANGE-ME
-          SQUARED_LINK_DOMAIN: CHANGE-ME
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.squared.ios
+        # the Mac build is signed locally (no Apple account), so it skips the widget's app group
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": Squared/Resources/Squared-mac.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         TARGETED_DEVICE_FAMILY: "1"
-    postBuildScripts:
-      - name: Release checks
-        basedOnDependencyAnalysis: false
-        script: |
-          if [ "$CONFIGURATION" != "Release" ]; then exit 0; fi
-          case "$SQUARED_API_BASE_URL $SQUARED_LINK_DOMAIN" in
-            *CHANGE-ME*) echo "error: set SQUARED_API_BASE_URL and SQUARED_LINK_DOMAIN for Release in ios/project.yml"; exit 1 ;;
-          esac
-          # local-network exception is for the dev stack only
-          /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$TARGET_BUILD_DIR/$INFOPLIST_PATH" 2>/dev/null || true
   SquaredWidget:
     type: app-extension
     platform: iOS
@@ -93,6 +74,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.squared.ios.widget
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": Squared/Resources/Squared-mac.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.10"
   SquaredTests:

@@ -46,11 +46,6 @@
 		<string>gpay</string>
 		<string>paytmmp</string>
 	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Squared uses Bluetooth to sync shared groups with friends' phones nearby.</string>
 	<key>NSBonjourServices</key>
@@ -66,8 +61,6 @@
 	<string>Squared finds friends' phones nearby to sync shared groups directly, without the internet.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Attach a photo of a bill to an expense.</string>
-	<key>RCAPIBaseURL</key>
-	<string>$(SQUARED_API_BASE_URL)</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

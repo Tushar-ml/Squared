@@ -1,11 +1,9 @@
-.docker/
-__pycache__/
-*.pyc
-.pytest_cache/
-.hypothesis/
+.DS_Store
 ios/build/
 ios/*.xcodeproj/xcuserdata/
 DerivedData/
-backend/uploads/
-.DS_Store
-backend/.env.dev
+dist/
+# leftovers from the old server, kept out of git
+backend/
+.docker/
+__pycache__/

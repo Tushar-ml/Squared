@@ -21,7 +21,7 @@
 		2707AAD6315EA40E59490518 /* NeoPop in Frameworks */ = {isa = PBXBuildFile; productRef = 6458CF9A332695F489AF5D49 /* NeoPop */; };
 		36DCB455D9D02B767B3827AE /* CelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A1D5022C9119A383497774 /* CelebrationView.swift */; };
 		3AA602F7A9C2C1C2CD8B51D0 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90FF9284E3DF31479919C3C4 /* Theme.swift */; };
-		3E4CAE6AA4FD33BB417FEC91 /* SquaredWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 07FD5F56960CAA0301CE9280 /* SquaredWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3E4CAE6AA4FD33BB417FEC91 /* SquaredWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 07FD5F56960CAA0301CE9280 /* SquaredWidget.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3E8105B7CA5E78A1A9CFEDDC /* LocalAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3881A0ED8FF93AB044A22ED /* LocalAPITests.swift */; };
 		3ECDF2E1E357D9E34C1EC74A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9EA313748554C968E7274066 /* Assets.xcassets */; };
 		621502076CB832C6469EA7BC /* AuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D12AD29C420A8011A089BC0 /* AuthViews.swift */; };
@@ -110,6 +110,7 @@
 		5C58B926DD7E7A7D2BCC53C7 /* CurrencyPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyPicker.swift; sourceTree = "<group>"; };
 		5E2266D1A4E4715D0DE62D89 /* SquaredWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquaredWidget.swift; sourceTree = "<group>"; };
 		6329B436F38B0A581DB75899 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		6B6E811522AE77AE7304B4EE /* Squared-mac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Squared-mac.entitlements"; sourceTree = "<group>"; };
 		72B55C8A1ED7F736EFEE84AB /* GroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupView.swift; sourceTree = "<group>"; };
 		7330A7C6482CEBDB9B1192C7 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		7FF9CCBA938E66070AEB9A5A /* ExpenseForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseForm.swift; sourceTree = "<group>"; };
@@ -227,6 +228,7 @@
 				9EA313748554C968E7274066 /* Assets.xcassets */,
 				C04988C29A5F6C5B5787C3E4 /* Info.plist */,
 				2BBEC50583E818D0C6FDF130 /* Localizable.strings */,
+				6B6E811522AE77AE7304B4EE /* Squared-mac.entitlements */,
 				30CBCF2BE285B0CBBD2D9409 /* Squared.entitlements */,
 			);
 			path = Resources;
@@ -418,7 +420,6 @@
 				19D5D2946492B8CB00647730 /* Resources */,
 				E50C1B3877F9A914C6F59B0B /* Frameworks */,
 				26B86EFD24C0F78D4A0392BF /* Embed Foundation Extensions */,
-				1ED81E5E243838C1FA3D8A8E /* Release checks */,
 			);
 			buildRules = (
 			);
@@ -528,28 +529,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		1ED81E5E243838C1FA3D8A8E /* Release checks */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Release checks";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"$CONFIGURATION\" != \"Release\" ]; then exit 0; fi\ncase \"$SQUARED_API_BASE_URL $SQUARED_LINK_DOMAIN\" in\n  *CHANGE-ME*) echo \"error: set SQUARED_API_BASE_URL and SQUARED_LINK_DOMAIN for Release in ios/project.yml\"; exit 1 ;;\nesac\n# local-network exception is for the dev stack only\n/usr/libexec/PlistBuddy -c \"Delete :NSAppTransportSecurity:NSAllowsLocalNetworking\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\" 2>/dev/null || true\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		BCCCC049D315B699D0C25ED9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -626,6 +605,9 @@
 		};
 		825EE509FA2737454E117BE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilters = (
+				ios,
+			);
 			target = E150E87506DFB8579C3726D9 /* SquaredWidget */;
 			targetProxy = DC6A7BD862FF655C6DE449B6 /* PBXContainerItemProxy */;
 		};
@@ -636,6 +618,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = SquaredWidget/SquaredWidget.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Squared/Resources/Squared-mac.entitlements";
 				INFOPLIST_FILE = SquaredWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -654,6 +637,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Squared/Resources/Squared.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Squared/Resources/Squared-mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Squared/Resources/Info.plist;
@@ -663,8 +647,10 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios;
 				SDKROOT = iphoneos;
-				SQUARED_API_BASE_URL = "https://api.CHANGE-ME";
-				SQUARED_LINK_DOMAIN = "CHANGE-ME";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -741,6 +727,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Squared/Resources/Squared.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Squared/Resources/Squared-mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Squared/Resources/Info.plist;
@@ -750,8 +737,10 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios;
 				SDKROOT = iphoneos;
-				SQUARED_API_BASE_URL = "http://localhost:8080";
-				SQUARED_LINK_DOMAIN = localhost;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -837,6 +826,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = SquaredWidget/SquaredWidget.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Squared/Resources/Squared-mac.entitlements";
 				INFOPLIST_FILE = SquaredWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
