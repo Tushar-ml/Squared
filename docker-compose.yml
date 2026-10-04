@@ -17,7 +17,7 @@ services:
       retries: 30
 
   api:
-    build: ./backend
+    build: { context: ./backend, args: { INSTALL_DEV: "1" } }
     command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
     env_file: backend/.env.dev
     ports: ["8080:8080"]
@@ -26,7 +26,7 @@ services:
       db: { condition: service_healthy }
 
   worker:
-    build: ./backend
+    build: { context: ./backend, args: { INSTALL_DEV: "1" } }
     command: python -m app.worker
     env_file: backend/.env.dev
     volumes: ["./backend:/srv"]

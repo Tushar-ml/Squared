@@ -1,0 +1,60 @@
+# DigitalOcean App Platform spec for Squared (see docs/DEPLOY.md).
+# Secret values are NOT stored here: scripts/do-deploy.sh fills every placeholder before creating the app.
+name: squared
+region: blr
+
+databases:
+  - name: db
+    engine: PG
+    version: "16"
+    production: true            # managed cluster: daily backups, point-in-time recovery
+    cluster_name: squared-db
+
+services:
+  - name: api
+    github: { repo: Tushar-ml/Squared, branch: main, deploy_on_push: true }
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    http_port: 8080
+    instance_size_slug: apps-s-1vcpu-1gb
+    instance_count: 1
+    health_check: { http_path: /health, initial_delay_seconds: 20 }
+    routes: [{ path: / }]
+    envs: &envs
+      - { key: APP_ENV, value: prod }
+      - { key: DATABASE_URL, scope: RUN_TIME, value: "${db.DATABASE_URL}" }
+      - { key: PUBLIC_BASE_URL, scope: RUN_TIME, value: "${APP_URL}" }
+      - { key: TRUST_PROXY, value: "1" }
+      - { key: STORAGE_BACKEND, value: s3 }
+      - { key: S3_ENDPOINT_URL, value: "https://blr1.digitaloceanspaces.com" }
+      - { key: S3_REGION, value: blr1 }
+      - { key: S3_BUCKET, value: "__FILL__" }
+      - { key: AWS_ACCESS_KEY_ID, type: SECRET, value: "__FILL__" }
+      - { key: AWS_SECRET_ACCESS_KEY, type: SECRET, value: "__FILL__" }
+      - { key: SURPRISE_SECRET, type: SECRET, value: "__FILL__" }
+      - { key: INVITE_SECRET, type: SECRET, value: "__FILL__" }
+      - { key: VOUCHER_KEY, type: SECRET, value: "__FILL__" }
+      - { key: OTP_SECRET, type: SECRET, value: "__FILL__" }
+      - { key: SUPPORT_EMAIL, value: "__FILL__" }
+      - { key: OPERATOR_NAME, value: Squared }
+      - { key: IOS_BUNDLE_ID, value: app.squared.ios }
+      - { key: APPLE_TEAM_ID, value: "" }          # set after Apple enrolment (Universal Links)
+      - { key: REVIEW_PHONES, value: "__FILL__" }
+      - { key: REVIEW_OTP, type: SECRET, value: "__FILL__" }
+      - { key: APNS_SANDBOX, value: "1" }          # 0 for App Store builds
+      - { key: VENDOR_URL, value: "" }             # vouchers are off (redemption.enabled = false)
+      - { key: WORKER_POLL_SECONDS, value: "1" }
+
+workers:
+  - name: worker                # outbox, notifications, recurring bills, nudges: keep exactly one
+    github: { repo: Tushar-ml/Squared, branch: main, deploy_on_push: true }
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    run_command: python -m app.worker
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    envs: *envs
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED

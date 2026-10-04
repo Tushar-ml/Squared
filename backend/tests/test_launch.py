@@ -131,6 +131,7 @@ def _prod(**env):
     s.public_base_url = "https://api.squared.example"
     s.storage_backend, s.s3_bucket = "s3", "squared-bills"
     s.support_email, s.apple_team_id = "help@squared.example", "ABCDE12345"
+    s.review_phones, s.review_otp = "", ""
     for k, v in env.items():
         setattr(s, k, v)
     return s
@@ -204,3 +205,31 @@ def test_universal_links_file(client, monkeypatch):
     assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
     d = r.json()["applinks"]["details"][0]
     assert d["appIDs"] == ["ABCDE12345.app.squared.ios"] and d["components"] == [{"/": "/j/*"}]
+
+
+# ---------------------------------------------------------------- review / test accounts (no SMS)
+
+def test_review_phones_sign_in_with_fixed_code_without_sms(w, monkeypatch):
+    from app import api_core, sms
+    sent = []
+    monkeypatch.setattr(sms, "send_otp", lambda phone, code: sent.append(phone) or True)
+    monkeypatch.setattr(api_core.settings, "app_env", "prod")      # behave like production: no DEV_OTP
+    monkeypatch.setattr(api_core.settings, "dev_otp", "")
+    monkeypatch.setattr(api_core.settings, "review_phones", "+919000011111, +919000022222")
+    monkeypatch.setattr(api_core.settings, "review_otp", "482915")
+    r = _otp(w, "9000011111")
+    assert r.status_code == 200 and "dev_hint" not in r.json() and sent == []
+    assert _verify(w, "+919000011111", "482915").status_code == 200
+    # anyone else gets a real, random code by SMS and the review code does nothing for them
+    clock.travel(timedelta(seconds=31))
+    assert _otp(w, "+919000033333").status_code == 200 and sent == ["+919000033333"]
+    assert _verify(w, "+919000033333", "482915").status_code == 400
+
+
+def test_production_guard_on_review_code_and_apple_team_id():
+    assert any("REVIEW_OTP" in p for p in _prod(review_phones="+919000011111", review_otp="").production_problems())
+    assert any("REVIEW_OTP" in p for p in _prod(review_phones="+919000011111", review_otp="123456").production_problems())
+    assert _prod(review_phones="+919000011111", review_otp="482915").production_problems() == []
+    # Universal Links can wait for the Apple account: a warning, not a blocker
+    s = _prod(apple_team_id="")
+    assert s.production_problems() == [] and any("APPLE_TEAM_ID" in x for x in s.production_warnings())

@@ -13,6 +13,7 @@ log = logging.getLogger("worker")
 
 
 def main():
+    settings.assert_safe_for_production()
     db.init_pool(size=4)
     for _ in range(30):
         try:

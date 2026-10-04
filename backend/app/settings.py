@@ -17,7 +17,10 @@ class Settings:
     apple_team_id = os.getenv("APPLE_TEAM_ID", "")          # for Universal Links (apple-app-site-association)
     ios_bundle_id = os.getenv("IOS_BUNDLE_ID", "app.squared.ios")
     support_email = os.getenv("SUPPORT_EMAIL", "")          # shown on the legal and support pages
-    operator_name = os.getenv("OPERATOR_NAME", "Squared")   # read the client IP from X-Forwarded-For (behind a load balancer)
+    operator_name = os.getenv("OPERATOR_NAME", "Squared")
+    # App Review and internal testers: these numbers sign in with REVIEW_OTP and never get an SMS
+    review_phones = os.getenv("REVIEW_PHONES", "")          # comma-separated, e.g. +919000011111,+919000022222
+    review_otp = os.getenv("REVIEW_OTP", "")   # read the client IP from X-Forwarded-For (behind a load balancer)
     vendor_url = os.getenv("VENDOR_URL", "http://localhost:8090")
     vendor_timeout = float(os.getenv("VENDOR_TIMEOUT_SECONDS", "3"))
     smtp_host = os.getenv("SMTP_HOST", "")
@@ -46,11 +49,27 @@ class Settings:
             out.append("STORAGE_BACKEND=s3 and S3_BUCKET are required: local disk doesn't survive deploys")
         if not self.support_email:
             out.append("SUPPORT_EMAIL is required: the privacy policy must give a contact for data requests")
+        if self.review_phones.strip():
+            code = self.review_otp
+            if not (code.isdigit() and len(code) == 6) or code in ("123456", "000000", "111111"):
+                out.append("REVIEW_OTP must be a non-obvious 6-digit code when REVIEW_PHONES is set")
+        return out
+
+    def production_warnings(self) -> list[str]:
+        """Not unsafe, but something to finish before the App Store launch."""
+        if self.is_dev:
+            return []
+        out = []
         if not self.apple_team_id:
-            out.append("APPLE_TEAM_ID is required so invite links open the app (Universal Links)")
+            out.append("APPLE_TEAM_ID is not set: invite links open the web page instead of the app")
+        if not os.getenv("SMS_PROVIDER"):
+            out.append("SMS_PROVIDER is not set: only REVIEW_PHONES can sign in (codes for others are never sent)")
         return out
 
     def assert_safe_for_production(self) -> None:
+        import logging
+        for w in self.production_warnings():
+            logging.getLogger("settings").warning(w)
         problems = self.production_problems()
         if problems:
             raise RuntimeError("Refusing to start with APP_ENV=%s:\n- %s" % (self.app_env, "\n- ".join(problems)))

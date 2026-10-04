@@ -65,12 +65,28 @@ def _client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
+def _review_phones() -> set[str]:
+    out = set()
+    for p in settings.review_phones.split(","):
+        try:
+            out.add(_norm_phone(p.strip()))
+        except HTTPException:
+            pass
+    return out
+
+
 @router.post("/auth/otp/request")
 def otp_request(body: OtpRequest, request: Request):
     phone = _norm_phone(body.phone)
     ip = _client_ip(request)
     now = clock.now()
-    code = settings.dev_otp if settings.is_dev and settings.dev_otp else f"{secrets.randbelow(10**6):06d}"
+    review = bool(settings.review_otp) and phone in _review_phones()
+    if review:
+        code = settings.review_otp
+    elif settings.is_dev and settings.dev_otp:
+        code = settings.dev_otp
+    else:
+        code = f"{secrets.randbelow(10**6):06d}"
     with db.tx() as conn:
         conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (phone,))
         last = conn.execute("SELECT max(created_at) t, count(*) FILTER (WHERE created_at > %s) n FROM otp_sends WHERE phone=%s",
@@ -87,7 +103,7 @@ def otp_request(body: OtpRequest, request: Request):
                         ON CONFLICT (phone) DO UPDATE SET code=EXCLUDED.code, expires_at=EXCLUDED.expires_at, attempts=0""",
                      (phone, _otp_hash(phone, code), now + timedelta(minutes=10)))
     from . import sms
-    if not (settings.is_dev and settings.dev_otp):
+    if not review and not (settings.is_dev and settings.dev_otp):
         sms.send_otp(phone, code)
     out = {"phone": phone, "sent": True}
     if settings.is_dev:
