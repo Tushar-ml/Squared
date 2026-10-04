@@ -13,9 +13,8 @@ struct FlatSetupFlow: View {
     @State private var people = 3
     @State private var kind: GroupKind = .home
     @State private var busy = false
-    @State private var showPaste = false
+    @State private var personName = ""
     // invite
-    @State private var invite: InviteLink?
     @State private var members: [Member] = []
     // expense
     @State private var desc = ""
@@ -55,15 +54,7 @@ struct FlatSetupFlow: View {
         .background(Theme.bg)
         .overlay(alignment: .bottom) { cta.padding(.horizontal, 24).padding(.bottom, 8) }
         .onAppear { APIClient.shared.track("flat_setup_started", props: ["step": step.rawValue]) }
-        .sheet(isPresented: $showPaste) { PasteInviteSheet() }
-        .onChange(of: state.pendingJoinToken) { _, t in if t != nil { dismiss() } }  // joining instead of creating
-        .task(id: step) {
-            if step == .invite { await loadInvite() }
-            while step == .invite && !Task.isCancelled {   // live "who joined" list
-                await loadMembers()
-                try? await Task.sleep(for: .seconds(3))
-            }
-        }
+        .task(id: step) { if step == .invite { await loadMembers() } }
     }
 
     // MARK: steps
@@ -97,19 +88,9 @@ struct FlatSetupFlow: View {
                         .accessibilityAddTraits(people == n ? .isSelected : [])
                     }
                 }
-                Text("We'll remind you to invite everyone. Coins start as soon as one person joins.")
+                Text("Next you'll add their names. Nobody needs the app.")
                     .font(Theme.body(13)).foregroundStyle(Theme.muted)
             }
-            }
-            Divider().overlay(Theme.line).padding(.vertical, 4)
-            Button { showPaste = true } label: {
-                HStack {
-                    Image(systemName: "envelope.open")
-                    Text("Someone already invited me").font(Theme.body(15, .semibold))
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold))
-                }
-                .foregroundStyle(Theme.text).frame(minHeight: 44)
             }
         }
     }
@@ -117,53 +98,31 @@ struct FlatSetupFlow: View {
     private var inviteStep: some View {
         VStack(alignment: .leading, spacing: 18) {
             SectionLabel("Step 2 of 3", color: Theme.coin)
-            Text("Bring in your \(kind.people)").font(Theme.title(30))
-            Text("Expenses only need a tap from them to be confirmed. Each person who joins and gets a first expense confirmed earns you both +\(state.config?.earn.inviteEach ?? 50) coins.")
-                .font(Theme.body(15)).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
-            if let invite {
-                NeoPopButton(title: "Invite on WhatsApp", icon: "message.fill") {
-                    APIClient.shared.track("invite_shared", groupId: groupId, props: ["channel": "whatsapp", "surface": "setup"])
-                    if let url = URL(string: invite.whatsappUrl), UIApplication.shared.canOpenURL(url) { openURL(url) }
-                    else { state.showToast("WhatsApp isn't installed. Use Share instead.") }
+            Text("Who's splitting with you?").font(Theme.title(30))
+            HStack(spacing: 10) {
+                TextField("Name", text: $personName)
+                    .font(Theme.body(18, .bold)).textInputAutocapitalization(.words).submitLabel(.done)
+                    .onSubmit { Task { await addPerson() } }
+                    .padding(14).background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+                NeoPopButton(title: "Add", enabled: !personName.trimmingCharacters(in: .whitespaces).isEmpty, height: 50) {
+                    Task { await addPerson() }
                 }
-                HStack(spacing: 12) {
-                    ShareLink(item: invite.message) {
-                        Label("Share", systemImage: "square.and.arrow.up").font(.system(size: 14, weight: .heavy))
-                            .frame(maxWidth: .infinity, minHeight: 48).overlay(Rectangle().stroke(Theme.text))
-                    }
-                    .simultaneousGesture(TapGesture().onEnded {
-                        APIClient.shared.track("invite_shared", groupId: groupId, props: ["channel": "share_sheet", "surface": "setup"])
-                    })
-                    Button { UIPasteboard.general.string = invite.link; state.showToast("Link copied") } label: {
-                        Label("Copy link", systemImage: "link").font(.system(size: 14, weight: .heavy))
-                            .frame(maxWidth: .infinity, minHeight: 48).overlay(Rectangle().stroke(Theme.text))
-                    }
-                }
-                .foregroundStyle(Theme.text)
-            } else {
-                Skeleton(height: 50)
+                .frame(width: 90)
             }
             VStack(alignment: .leading, spacing: 10) {
                 SectionLabel("In \(groupName.isEmpty ? "your group" : groupName)")
                 ForEach(members) { m in
                     HStack(spacing: 12) {
-                        Avatar(name: m.isYou ? "You" : (m.name ?? "?"), tick: !m.isYou, size: 36)
+                        Avatar(name: m.isYou ? "You" : (m.name ?? "?"), size: 36)
                         Text(m.isYou ? "You" : (m.name ?? "")).font(Theme.body(15, .semibold))
-                        Spacer()
-                        if !m.isYou { StatusChip(text: "Joined", tint: Theme.owed) }
-                    }
-                }
-                ForEach(0..<max(0, (kind.fixedSize ?? people) - members.count), id: \.self) { _ in
-                    HStack(spacing: 12) {
-                        Rectangle().stroke(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [4])).frame(width: 36, height: 36)
-                        Text("Waiting for someone to join").font(Theme.body(14)).foregroundStyle(Theme.muted)
                         Spacer()
                     }
                 }
             }
             .padding(.top, 6)
+            Text("Add UPI IDs later from the group's people list, for one-tap payments.")
+                .font(Theme.body(13)).foregroundStyle(Theme.muted)
         }
-        .onAppear { APIClient.shared.track("invite_step_viewed", groupId: groupId) }
     }
 
     private var expenseStep: some View {
@@ -224,8 +183,7 @@ struct FlatSetupFlow: View {
                 Task { await create() }
             }
         case .invite:
-            NeoPopFloatingButton(title: members.count >= 2 ? "Continue" : "Continue without them", shimmer: members.count >= 2) {
-                if members.count < 2 { APIClient.shared.track("invite_step_skipped", groupId: groupId) }
+            NeoPopFloatingButton(title: "Continue", shimmer: members.count >= 2, enabled: members.count >= 2) {
                 withAnimation { step = .expense }
             }
         case .expense:
@@ -260,17 +218,18 @@ struct FlatSetupFlow: View {
         } catch { state.showToast(error.localizedDescription) }
     }
 
-    private func loadInvite() async {
-        guard let groupId, invite == nil else { return }
-        invite = try? await APIClient.shared.request("POST", "/invites", body: ["group_id": groupId])
+    private func addPerson() async {
+        let n = personName.trimmingCharacters(in: .whitespaces)
+        guard let groupId, !n.isEmpty else { return }
+        do {
+            try await APIClient.shared.raw("POST", "/groups/\(groupId)/members", body: ["name": n])
+            personName = ""
+            await loadMembers()
+        } catch { state.showToast(error.localizedDescription) }
     }
 
     private func loadMembers() async {
         guard let groupId, let d: GroupDetail = try? await APIClient.shared.request("GET", "/groups/\(groupId)") else { return }
-        if d.members.count > members.count && !members.isEmpty {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            state.announce("\(d.members.last?.name ?? "Someone") joined")
-        }
         members = d.members
         groupName = d.name
     }

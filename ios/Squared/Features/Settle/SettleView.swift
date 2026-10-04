@@ -97,10 +97,10 @@ struct SettleView: View {
 
     private func waiting(_ p: Payment) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: "hourglass").font(.system(size: 26, weight: .bold)).frame(width: 56, height: 56).background(Theme.surfaceHigh)
-            Text(Strings.waitingReceipt(p.receiverName ?? "")).font(Theme.title(24))
-            Text("Paid \(Format.inr(paise: p.amountPaise)). Balances are already updated.").font(Theme.body(14)).foregroundStyle(Theme.muted)
-            if OfflineQueue.shared.isPending("group:\(groupId):pay") { StatusChip(text: Strings.willSync) }
+            Image(systemName: "checkmark").font(.system(size: 26, weight: .black)).foregroundStyle(Theme.onAccent)
+                .frame(width: 56, height: 56).background(Theme.owed)
+            Text("Settled with \(p.receiverName ?? "them")").font(Theme.title(24))
+            Text("Paid \(Format.money(p.amountPaise, detail?.currency)). Balances are updated.").font(Theme.body(14)).foregroundStyle(Theme.muted)
             NeoPopButton(title: "Done") { dismiss() }
         }
     }
@@ -138,13 +138,6 @@ struct SettleView: View {
             recorded = p
             showMarkPaid = false
             state.refreshTick += 1
-        } catch let e as APIError where e.isOffline {
-            OfflineQueue.shared.enqueue(.init(method: "POST", path: "/groups/\(groupId)/payments", body: [:],
-                                              intBody: ["receiver_id": debt.creditorId, "amount_paise": paise],
-                                              tag: "group:\(groupId):pay"))
-            recorded = Payment(id: -1, groupId: groupId, payerId: state.user?.id ?? 0, payerName: nil, receiverId: debt.creditorId,
-                               receiverName: debt.creditorName, amountPaise: paise, note: nil, createdAt: "", confirmation: nil)
-            showMarkPaid = false
         } catch {
             state.showToast(error.localizedDescription)
         }

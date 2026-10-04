@@ -1,10 +1,10 @@
 /* Coin copy in Hindi (FR-18). Keys match Core/Strings.swift. */
 "coins.unavailable" = "अभी कॉइन उपलब्ध नहीं हैं";
 "household.title" = "इस हफ़्ते, साथ मिलकर";
-"household.progress" = "%1$lld में से %2$lld खर्च कन्फ़र्म";
-"household.reach" = "%1$lld तक पहुंचें और ग्रुप को +%2$lld मिलें";
-"household.met" = "लक्ष्य पूरा। ग्रुप के लिए +%lld।";
-"household.empty" = "पहला साझा खर्च जोड़ें। जब कोई कन्फ़र्म करेगा, आप दोनों को कॉइन मिलेंगे।";
+"household.progress" = "%2$lld में से %1$lld खर्च जोड़े";
+"household.reach" = "इस हफ़्ते %1$lld खर्च जोड़ें और +%2$lld कमाएं";
+"household.met" = "लक्ष्य पूरा। +%lld कॉइन।";
+"household.empty" = "कॉइन कमाना शुरू करने के लिए पहला साझा खर्च जोड़ें।";
 "household.pot" = "साझा पॉट: %lld";
 "household.squared" = "बराबर हफ़्ते: %lld";
 "confirm.prompt" = "सही है?";

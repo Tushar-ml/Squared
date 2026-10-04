@@ -13,7 +13,6 @@ struct GroupView: View {
     @State private var showIntro = false
     @State private var cardCollapsed = false
     @State private var settleTarget: Debt?
-    @State private var reminding: Int?
 
     var body: some View {
         ScrollView {
@@ -21,10 +20,6 @@ struct GroupView: View {
                 if let d = detail {
                     header(d)
                     toolRow(d)
-                    if let a = state.activation, !a.activated, let eid = a.confirmExpenseId,
-                       let e = d.expenses.first(where: { $0.id == eid }), d.coinsEnabled {
-                        WelcomeBanner(groupName: d.name, expense: e, firstWin: a.firstWinCoins ?? 50)
-                    }
                     if d.coinsEnabled {
                         if let h = household {
                             if let last = h.lastWeek, [2, 3].contains(Calendar.current.component(.weekday, from: Date())) {
@@ -90,7 +85,7 @@ struct GroupView: View {
                 BalanceText(net: d.myNetPaise, currency: d.currency)
                 Spacer()
                 if GroupKind(d.groupType) != .direct {
-                    NeoPopButton(title: "Invite", style: .stroke, icon: "person.badge.plus", height: 38) { showInvite = true }
+                    NeoPopButton(title: "People", style: .stroke, icon: "person.2", height: 38) { showInvite = true }
                         .frame(width: 120)
                 }
             }
@@ -104,7 +99,6 @@ struct GroupView: View {
                 tool("Insights", "chart.bar.xaxis", .insights(d.id))
                 tool("Recurring", "repeat", .recurring(d.id))
                 tool("Search", "magnifyingglass", .search(d.id))
-                tool("Chat", "bubble.left.and.bubble.right", .chat(d.id))
                 if GroupKind(d.groupType) != .direct { tool("Settings", "gearshape", .groupSettings(d.id)) }
             }
         }
@@ -156,37 +150,30 @@ struct GroupView: View {
         }
     }
 
-    /// Lets the person who is owed nudge someone to settle. The server allows one per pair per day.
-    @ViewBuilder
+    /// Nobody else has the app, so a reminder is a ready-made message you send them yourself.
     private func remindButton(_ debt: Debt) -> some View {
-        if let at = Format.date(debt.remindedAt), Date().timeIntervalSince(at) < 24 * 3600 {
-            Text("Reminded \(Format.relative(debt.remindedAt))").font(Theme.body(12, .semibold)).foregroundStyle(Theme.muted)
-        } else {
-            Button {
-                Task { await remind(debt) }
-            } label: {
-                HStack(spacing: 6) {
-                    if reminding == debt.debtorId { ProgressView().controlSize(.mini) }
-                    else { Image(systemName: "bell") }
-                    Text("Remind").font(Theme.body(13, .bold))
-                }
-                .padding(.horizontal, 12).frame(minHeight: 36)
-                .foregroundStyle(Theme.text)
-                .background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+        ShareLink(item: reminderText(debt)) {
+            HStack(spacing: 6) {
+                Image(systemName: "bell")
+                Text("Remind").font(Theme.body(13, .bold))
             }
-            .disabled(reminding != nil)
-            .accessibilityLabel("Remind \(debt.debtorName ?? "") to pay")
+            .padding(.horizontal, 12).frame(minHeight: 36)
+            .foregroundStyle(Theme.text)
+            .background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
         }
+        .accessibilityLabel("Send \(debt.debtorName ?? "") a reminder to pay")
     }
 
-    private func remind(_ debt: Debt) async {
-        reminding = debt.debtorId
-        defer { reminding = nil }
-        do {
-            _ = try await APIClient.shared.raw("POST", "/groups/\(groupId)/debts/\(debt.debtorId)/remind")
-            state.showToast("Reminder sent to \(debt.debtorName ?? "them")")
-            await load()
-        } catch { state.showToast(error.localizedDescription) }
+    private func reminderText(_ debt: Debt) -> String {
+        let amount = Format.money(debt.amountPaise, detail?.currency)
+        var text = "Hi \(debt.debtorName ?? ""), a reminder about \(amount) for \(detail?.name ?? "our split")."
+        if let upi = state.user?.upiId, !upi.isEmpty {
+            var c = URLComponents(); c.scheme = "upi"; c.host = "pay"
+            c.queryItems = [.init(name: "pa", value: upi), .init(name: "pn", value: state.user?.name),
+                            .init(name: "am", value: String(format: "%.2f", Double(debt.amountPaise) / 100)), .init(name: "cu", value: "INR")]
+            text += " You can pay me at \(upi)" + (c.url.map { ": \($0.absoluteString)" } ?? ".")
+        }
+        return text
     }
 
     private func activity(_ d: GroupDetail) -> some View {
@@ -289,8 +276,6 @@ struct HouseholdCard: View {
             }
             if !collapsed {
                 HStack(spacing: 16) {
-                    Label { Text(Strings.sharedPot(h.potCoins)) } icon: { CoinGlyph(size: 14) }
-                        .font(Theme.body(13, .semibold)).foregroundStyle(Theme.coin)
                     Text(Strings.weeksSquared(h.weeksSquared)).font(Theme.body(13, .semibold)).foregroundStyle(Theme.muted)
                 }
                 HStack(spacing: 10) {
@@ -299,23 +284,14 @@ struct HouseholdCard: View {
                     }
                     if let onInvite {
                         Button(action: onInvite) {
-                            Label("Invite", systemImage: "plus").font(Theme.body(13, .bold))
+                            Label("Add", systemImage: "plus").font(Theme.body(13, .bold))
                                 .padding(.horizontal, 10).frame(height: 34)
                                 .overlay(Rectangle().stroke(h.inviteSuggested ? Theme.coin : Theme.line))
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                if !h.potRedemptions.isEmpty, let r = h.potRedemptions.first {
-                    Text("\(r.redeemedBy ?? "Someone") redeemed a \(r.brand) INR \(r.faceValueInr) voucher from the pot")
-                        .font(Theme.body(12)).foregroundStyle(Theme.muted)
-                }
-                HStack(spacing: 18) {
-                    NavigationLink(value: Route.redeem) {
-                        Text("Use the pot").font(Theme.body(13, .bold)).underline()
-                    }.buttonStyle(.plain)
-                    RecapShareButton(groupName: groupName, h: h)
-                }
+                RecapShareButton(groupName: groupName, h: h)
             }
         }
         .neoPopCard(color: Theme.UI.surface, edge: h.goalMet ? Theme.UI.coin : Theme.UI.edge, depth: 6)
@@ -365,6 +341,15 @@ struct RecapCard: View {
 struct ExpenseRow: View {
     let expense: Expense
     let me: Int
+
+    private var summary: String {
+        let payer = expense.paidBy == me ? "You" : (expense.paidByName ?? "")
+        var s = "\(payer) paid, your share \(Format.money(expense.mySharePaise, expense.currency))"
+        if let oc = expense.originalCurrency { s += " · in \(oc)" }
+        if (expense.splitType ?? "EQUAL") != "EQUAL" { s += " · custom split" }
+        return s
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -372,24 +357,9 @@ struct ExpenseRow: View {
                 Spacer()
                 Text(Format.money(expense.amountPaise, expense.currency)).font(Theme.body(16, .heavy))
             }
-            Text("\(expense.paidBy == me ? "You" : (expense.paidByName ?? "")) paid, your share \(Format.money(expense.mySharePaise, expense.currency))"
-                 + (expense.originalCurrency.map { " · in \($0)" } ?? "")
-                 + ((expense.splitType ?? "EQUAL") != "EQUAL" ? " · custom split" : ""))
-                .font(Theme.body(13)).foregroundStyle(Theme.muted)
-            if let c = expense.confirmation {
-                HStack(spacing: 8) {
-                    ConfirmationChip(confirmation: c)
-                    if let first = c.confirmedBy.first {
-                        Text(Strings.confirmedBy(first.name ?? "")).font(Theme.body(12)).foregroundStyle(Theme.muted)
-                    }
-                    if !c.waitingOn.isEmpty && c.status == "WAITING" {
-                        Text(c.waitingOn.map { "\($0.name ?? ""): waiting" }.joined(separator: " · "))
-                            .font(Theme.body(12)).foregroundStyle(Theme.muted).lineLimit(1)
-                    }
-                    Spacer()
-                    if c.canConfirm { Text("Tap to confirm").font(Theme.body(12, .bold)).foregroundStyle(Theme.coin) }
-                    if OfflineQueue.shared.isPending("expense:\(expense.id)") { StatusChip(text: Strings.willSync) }
-                }
+            Text(summary).font(Theme.body(13)).foregroundStyle(Theme.muted)
+            if expense.splitType != nil, expense.mySharePaise == 0, expense.paidBy != me {
+                Text("Not involving you").font(Theme.body(12)).foregroundStyle(Theme.muted)
             }
         }
         .padding(14)
@@ -412,19 +382,6 @@ struct PaymentRow: View {
                     .font(Theme.body(15, .semibold))
                 Spacer()
                 Text(Format.money(payment.amountPaise, currency)).font(Theme.body(15, .heavy))
-            }
-            if let c = payment.confirmation {
-                switch c.status {
-                case "PENDING":
-                    if c.canConfirm {
-                        ReceiptBar(payment: payment, reward: 0, onDone: onChange)
-                    } else {
-                        StatusChip(text: Strings.waitingReceipt(payment.receiverName ?? ""))
-                    }
-                case "CONFIRMED": StatusChip(text: "Receipt confirmed", tint: Theme.text)
-                case "REJECTED": StatusChip(text: "\(payment.receiverName ?? "They") hasn't received it yet")
-                default: StatusChip(text: "Unverified")
-                }
             }
         }
         .padding(14)

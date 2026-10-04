@@ -7,7 +7,6 @@ enum Route: Hashable {
     case group(Int)
     case expense(Int)
     case wallet
-    case redeem
     case household(Int)
     case settle(Int)
     case insights(Int)
@@ -15,7 +14,6 @@ enum Route: Hashable {
     case groupSettings(Int)
     case recurring(Int)
     case search(Int)
-    case chat(Int)
 }
 
 enum AppTab: Hashable { case flats, activity, coins, account }
@@ -43,10 +41,6 @@ final class AppState {
     var coinsUnavailable = false
     var celebration: Celebration?
     var path: [Route] = []
-    /// Invite token from a deep link. Persisted so it survives signup and app restarts.
-    var pendingJoinToken: String? = UserDefaults.standard.string(forKey: "pendingJoinToken") {
-        didSet { UserDefaults.standard.set(pendingJoinToken, forKey: "pendingJoinToken") }
-    }
     var activation: Activation?
     var tab: AppTab = .flats
     var appearance = Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "dark") ?? .dark {
@@ -69,14 +63,13 @@ final class AppState {
     let api = APIClient.shared
 
     init() {
-        token = Keychain.read("token")
-        api.token = token
-        NotificationCenter.default.addObserver(forName: .sessionExpired, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.signOut(local: true) }
+        token = "local"     // offline app: there are no accounts or sessions
+        NotificationCenter.default.addObserver(forName: .coinsChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.refreshCoins() }
         }
     }
 
-    var signedIn: Bool { token != nil && user != nil }
+    var signedIn: Bool { user != nil }
     var coinValue: Double { config?.coinValueInr ?? 0.25 }
     var coinsLive: Bool { (config?.enabled ?? true) && !(config?.killSwitch ?? false) && !(user?.hideCoins ?? false) }
 
@@ -85,60 +78,37 @@ final class AppState {
         #if DEBUG
         await DebugAutomation.run(self)
         #endif
-        guard api.token != nil else { return }
-        do {
-            user = try await api.request("GET", "/me")
-            needsProfile = user?.name.isEmpty ?? true
-            await refreshCoins()
-            await refreshActivation()
-            OfflineQueue.shared.flush()
-            NotificationManager.shared.requestAuthorization()   // no-op once the user has decided
-        } catch let e as APIError where e.status == 401 {
-            signOut(local: true)
-        } catch {}
+        guard onboarded else { return }      // the walkthrough comes first; it calls startLocal()
+        await startLocal()
     }
 
-    func didSignIn(_ r: AuthResponse) async {
-        #if DEBUG
-        print("[state] didSignIn user=\(r.user.id) isNew=\(r.isNew)")
-        #endif
-        Keychain.save("token", r.token)
-        token = r.token
-        user = r.user
-        needsProfile = r.isNew || r.user.name.isEmpty
-        api.flushQueuedEvents()
-        if onboarded && !r.user.introSeen {
-            // the walkthrough already covered the coin intro (S10); don't show it twice
-            user?.introSeen = true
-            Task { try? await api.raw("PATCH", "/me", body: ["intro_seen": true]) }
-        }
+    /// Load (or create) you, the one person using this app, and add any recurring bills that are due.
+    func startLocal() async {
+        LocalAPI.shared.ensureMe()
+        user = try? await api.request("GET", "/me")
+        needsProfile = user?.name.isEmpty ?? true
+        await LocalAPI.shared.runDueRecurring()
         await refreshCoins()
         await refreshActivation()
-        NotificationManager.shared.requestAuthorization()
+        NotificationManager.shared.requestAuthorization()   // for recurring-bill and budget alerts
     }
 
-    func signOut(local: Bool = false) {
-        #if DEBUG
-        print("[state] signOut local=\(local)")
-        #endif
-        if !local { Task { try? await api.raw("POST", "/auth/logout") } }
-        Keychain.delete("token")
-        token = nil
+    /// After "Erase all data": back to a fresh start.
+    func resetAfterErase() {
         WidgetSnapshot.clear()
         user = nil
         balance = nil
         path = []
+        onboarded = false
     }
 
     func refreshActivation() async {
-        guard api.token != nil else { return }
         if let a: Activation = try? await api.request("GET", "/me/activation") { activation = a }
     }
 
     /// Where a brand-new account goes after profile setup.
     func routeAfterProfile() async {
         await refreshActivation()
-        if pendingJoinToken != nil { return }          // JoinGroupSheet takes over
         if activation?.group == nil { showFlatSetup = true }
     }
 
@@ -150,7 +120,6 @@ final class AppState {
     }
 
     func refreshCoins(celebrate: Bool = true) async {
-        guard api.token != nil else { return }
         do {
             let w: Wallet = try await api.request("GET", "/coins/wallet")
             balance = w.balance
@@ -199,23 +168,20 @@ final class AppState {
     }
 
     func handle(url: URL) {
-        // Universal Link: https://<link domain>/j/<token> opens straight into the join flow
-        if url.scheme == "https", url.pathComponents.count == 3, url.pathComponents[1] == "j" {
-            pendingJoinToken = url.pathComponents[2]
-            return
-        }
         guard url.scheme == "squared" else { return }
         #if DEBUG
         if DebugAutomation.handle(url, self) { return }
         #endif
-        let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        if url.host == "join", let token = comps?.queryItems?.first(where: { $0.name == "token" })?.value {
-            pendingJoinToken = token
+        // squared://open?route=group&id=3 (the widget uses route=home)
+        let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let id = q.first { $0.name == "id" }?.value.flatMap(Int.init)
+        switch q.first(where: { $0.name == "route" })?.value {
+        case "group": if let id { open(.group(id)) }
+        case "expense": if let id { open(.expense(id)) }
+        case "wallet": open(.wallet)
+        default: break
         }
     }
-
-    /// Vouchers launch later; until then the catalogue is a preview and coins just accrue.
-    var redemptionLive: Bool { config?.redemption?.enabled ?? false }
 
     func open(_ route: Route) {
         tab = .flats
@@ -232,32 +198,5 @@ final class AppState {
             try? await Task.sleep(for: .seconds(2.6))
             if toast == text { toast = nil }
         }
-    }
-}
-
-enum Keychain {
-    private static let service = "app.squared.ios"
-
-    static func save(_ key: String, _ value: String) {
-        delete(key)
-        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                                kSecAttrAccount as String: key, kSecValueData as String: Data(value.utf8),
-                                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock]
-        SecItemAdd(q as CFDictionary, nil)
-    }
-
-    static func read(_ key: String) -> String? {
-        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                                kSecAttrAccount as String: key, kSecReturnData as String: true,
-                                kSecMatchLimit as String: kSecMatchLimitOne]
-        var out: AnyObject?
-        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data else { return nil }
-        return String(data: d, encoding: .utf8)
-    }
-
-    static func delete(_ key: String) {
-        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                                kSecAttrAccount as String: key]
-        SecItemDelete(q as CFDictionary)
     }
 }

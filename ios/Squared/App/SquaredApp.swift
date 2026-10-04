@@ -3,19 +3,8 @@ import SwiftUI
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        NotificationManager.shared.configure()
-        application.registerForRemoteNotifications()   // APNs token goes to the backend when push is configured
+        NotificationManager.shared.configure()   // local notifications only: recurring bills, budgets
         return true
-    }
-
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        let token = deviceToken.map { String(format: "%02x", $0) }.joined()
-        UserDefaults.standard.set(token, forKey: "apnsToken")
-        Task { try? await APIClient.shared.raw("POST", "/me/devices", body: ["token": token, "platform": "ios"]) }
-    }
-
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        // Simulator / no push entitlement: local delivery via /me/notifications/deliver keeps working.
     }
 }
 
@@ -32,18 +21,18 @@ struct SquaredApp: App {
                 .preferredColorScheme(state.appearance.scheme)
                 .tint(Theme.text)
                 .onOpenURL { state.handle(url: $0) }
-                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { a in if let u = a.webpageURL { state.handle(url: u) } }
                 .task {
-                    if state.faceIDEnabled && state.signedIn == false && Keychain.read("token") != nil { state.locked = true }
+                    if state.faceIDEnabled && state.onboarded { state.locked = true }
                     await state.bootstrap()
                 }
                 .onChange(of: phase) { _, p in
                     if p == .active {
-                        NotificationManager.shared.startPolling()
-                        OfflineQueue.shared.flush()
-                        Task { await state.refreshConfig(); await state.refreshCoins() }
+                        Task {
+                            await LocalAPI.shared.runDueRecurring()
+                            await state.refreshCoins()
+                            state.refreshTick += 1
+                        }
                     } else if p == .background {
-                        NotificationManager.shared.stopPolling()
                         if state.faceIDEnabled && state.signedIn { state.locked = true }
                     }
                 }
@@ -58,11 +47,14 @@ struct RootView: View {
         @Bindable var state = state
         ZStack {
             Theme.bg.ignoresSafeArea()
-            if !state.signedIn && !state.onboarded {
-                WalkthroughView { withAnimation { state.onboarded = true } }
-                    .transition(.opacity)
+            if !state.onboarded {
+                WalkthroughView {
+                    withAnimation { state.onboarded = true }
+                    Task { await state.startLocal() }
+                }
+                .transition(.opacity)
             } else if !state.signedIn {
-                PhoneEntryView()
+                ProgressView()
             } else if state.needsProfile {
                 ProfileSetupView()
             } else {
@@ -88,11 +80,6 @@ struct RootView: View {
         .fullScreenCover(item: $state.celebration) { c in
             CelebrationView(celebration: c)
                 .presentationBackground(.clear)
-        }
-        .sheet(isPresented: Binding(get: { state.pendingJoinToken != nil && state.signedIn && !state.needsProfile },
-                                    set: { if !$0 { state.pendingJoinToken = nil } })) {
-            JoinGroupSheet(token: state.pendingJoinToken ?? "")
-                .presentationDetents([.medium])
         }
     }
 }

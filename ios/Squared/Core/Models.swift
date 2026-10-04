@@ -5,7 +5,6 @@ import Foundation
 
 struct User: Codable, Equatable {
     let id: Int
-    let phone: String
     var name: String
     var email: String?
     var upiId: String?

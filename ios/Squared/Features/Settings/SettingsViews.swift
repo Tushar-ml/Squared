@@ -53,20 +53,18 @@ struct IntroView: View {
     }
 }
 
-/// FR-15 preferences: hide coin UI and per-type notification toggles.
+/// Your profile and the app's settings. Everything here lives on this device.
 struct SettingsView: View {
     var showsDone = true
     @Environment(AppState.self) private var state
     @Environment(\.dismiss) private var dismiss
     @State private var faceID = false
-    @State private var hindi = false
-    @State private var prefs: [NotificationPref] = []
     @State private var hideCoins = false
     @State private var loaded = false
-    @State private var confirmDelete = false
-    @State private var deleting = false
-    @State private var deleteError: String?
-    @Environment(\.openURL) private var openURL
+    @State private var confirmErase = false
+    @State private var exportURL: URL?
+    @State private var importing = false
+    @State private var confirmImport: URL?
 
     var body: some View {
         NavigationStack {
@@ -75,7 +73,6 @@ struct SettingsView: View {
                     if let u = state.user {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(u.name).font(Theme.title(24))
-                            Text(u.phone).font(Theme.body(14)).foregroundStyle(Theme.muted)
                             if let upi = u.upiId { Text("UPI: \(upi)").font(Theme.body(13)).foregroundStyle(Theme.muted) }
                         }
                         NeoPopButton(title: "Edit profile", style: .stroke, height: 44) { state.needsProfile = true; if showsDone { dismiss() } }
@@ -92,8 +89,6 @@ struct SettingsView: View {
                         }
                     }
                     .overlay(Rectangle().stroke(Theme.line))
-                    SectionLabel("Language")
-                    NeoPopToggle(label: "Notifications in हिंदी", isOn: $hindi)
                     Button("App language: change in iOS Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
@@ -103,29 +98,21 @@ struct SettingsView: View {
                     SectionLabel("Coins")
                     NeoPopToggle(label: "Hide coins", isOn: $hideCoins)
                     Text("Splitting, balances and settling work the same either way.").font(Theme.body(12)).foregroundStyle(Theme.muted)
-                    SectionLabel("Notifications")
-                    ForEach($prefs) { $p in NeoPopToggle(label: p.label, isOn: $p.enabled) }
-                    Text("We send at most 2 coin notifications a day and none between 10 pm and 8 am.")
+                    SectionLabel("Your data")
+                    Text("Everything is stored only on this device. Export a backup now and then; iCloud device backups include it too.")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
-                    SectionLabel("About")
-                    VStack(alignment: .leading, spacing: 0) {
-                        linkRow("Terms of use", "legal/terms")
-                        linkRow("Privacy policy", "legal/privacy")
-                        linkRow("Help and support", "support")
+                    HStack(spacing: 12) {
+                        NeoPopButton(title: "Export backup", style: .stroke, icon: "square.and.arrow.up", height: 44) { exportBackup() }
+                        NeoPopButton(title: "Import", style: .stroke, icon: "square.and.arrow.down", height: 44) { importing = true }
                     }
-                    NeoPopButton(title: "Sign out", style: .flatStroke, height: 44) { state.signOut(); if showsDone { dismiss() } }
-                        .padding(.top, 12)
-                    Button(role: .destructive) { confirmDelete = true } label: {
-                        HStack(spacing: 8) {
-                            if deleting { ProgressView().controlSize(.small) }
-                            Text("Delete account").font(Theme.body(15, .semibold))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                    Text("Backups contain groups, people, expenses, payments and coins. Bill photos stay on the device.")
+                        .font(Theme.body(11)).foregroundStyle(Theme.muted)
+                    Button(role: .destructive) { confirmErase = true } label: {
+                        Text("Erase all data").font(Theme.body(15, .semibold)).frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .foregroundStyle(Theme.owe)
-                    .disabled(deleting)
-                    Text("Squared \(APIClient.appVersion) · \(APIClient.shared.baseURL.host() ?? "")")
-                        .font(Theme.body(11)).foregroundStyle(Theme.muted)
+                    .padding(.top, 8)
+                    Text("Squared \(APIClient.appVersion) · offline").font(Theme.body(11)).foregroundStyle(Theme.muted)
                 }
                 .padding(24)
             }
@@ -135,8 +122,9 @@ struct SettingsView: View {
         }
         .task {
             faceID = state.faceIDEnabled
-            hindi = state.user?.locale == "hi"
-            await load()
+            hideCoins = state.user?.hideCoins ?? false
+            try? await Task.sleep(for: .milliseconds(50))
+            loaded = true
         }
         .onChange(of: faceID) { _, v in
             guard v != state.faceIDEnabled else { return }
@@ -147,56 +135,44 @@ struct SettingsView: View {
                 }
             } else { state.faceIDEnabled = false }
         }
-        .onChange(of: hindi) { _, v in
-            Task {
-                if let u: User = try? await APIClient.shared.request("PATCH", "/me", body: ["locale": v ? "hi" : "en"]) { state.user = u }
-            }
-        }
         .onChange(of: hideCoins) { _, v in if loaded { Task { await setHide(v) } } }
-        .alert("Delete your account?", isPresented: $confirmDelete) {
-            Button("Delete account", role: .destructive) { Task { await deleteAccount() } }
+        .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
+            if case .success(let url) = result { confirmImport = url }
+        }
+        .alert("Replace everything with this backup?", isPresented: Binding(get: { confirmImport != nil }, set: { if !$0 { confirmImport = nil } })) {
+            Button("Replace", role: .destructive) { if let u = confirmImport { importBackup(u) } }
             Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Your name, phone number and coins are removed. Shared expenses stay in each group as \"Deleted user\" so everyone's balances stay correct. This can't be undone.")
-        }
-        .alert("Can't delete yet", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: { Text(deleteError ?? "") }
-        .onChange(of: prefs) { old, new in if loaded && !old.isEmpty { Task { await save(new) } } }
+        } message: { Text("Your current groups and expenses on this device are replaced by the backup.") }
+        .alert("Erase all data?", isPresented: $confirmErase) {
+            Button("Erase", role: .destructive) { erase() }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Every group, person, expense, photo and coin on this device is deleted. Export a backup first if you might want it back.") }
     }
 
-    private func linkRow(_ title: String, _ path: String) -> some View {
-        Button { openURL(APIClient.shared.baseURL.appending(path: path)) } label: {
-            HStack {
-                Text(title).font(Theme.body(15, .semibold))
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.muted)
-            }
-            .frame(minHeight: 44)
-        }
-        .foregroundStyle(Theme.text)
-    }
-
-    private func deleteAccount() async {
-        deleting = true
-        defer { deleting = false }
+    private func exportBackup() {
         do {
-            _ = try await APIClient.shared.raw("DELETE", "/me")
-            state.signOut(local: true)
-            if showsDone { dismiss() }
-            state.showToast("Your account was deleted")
-        } catch {
-            deleteError = error.localizedDescription
-        }
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("Squared-backup-\(f.string(from: Date())).json")
+            try LocalDB.shared.exportData().write(to: url, options: .atomic)
+            exportURL = url
+        } catch { state.showToast("Couldn't create the backup") }
     }
 
-    private func load() async {
-        if let r: PrefsResponse = try? await APIClient.shared.request("GET", "/me/notification-prefs") {
-            prefs = r.prefs
-            hideCoins = r.hideCoins
-        }
-        try? await Task.sleep(for: .milliseconds(50))
-        loaded = true
+    private func importBackup(_ url: URL) {
+        let ok = url.startAccessingSecurityScopedResource()
+        defer { if ok { url.stopAccessingSecurityScopedResource() } }
+        do {
+            try LocalDB.shared.importData(try Data(contentsOf: url))
+            Task { await state.startLocal(); state.refreshTick += 1 }
+            state.showToast("Backup restored")
+        } catch { state.showToast("That file isn't a Squared backup") }
+    }
+
+    private func erase() {
+        try? LocalDB.shared.eraseEverything()
+        if showsDone { dismiss() }
+        state.resetAfterErase()
     }
 
     private func setHide(_ v: Bool) async {
@@ -205,62 +181,12 @@ struct SettingsView: View {
             state.refreshTick += 1
         }
     }
-
-    private func save(_ p: [NotificationPref]) async {
-        let dict = Dictionary(uniqueKeysWithValues: p.map { ($0.id, $0.enabled) })
-        _ = try? await APIClient.shared.raw("PUT", "/me/notification-prefs", body: ["prefs": dict])
-    }
 }
 
-/// In-app inbox: every coin notification, including ones held back by quiet hours or the daily cap.
-struct NotificationsInboxView: View {
-    @Environment(AppState.self) private var state
-    @Environment(\.dismiss) private var dismiss
-    @State private var items: [AppNotification] = []
-    @State private var loaded = false
+extension URL: @retroactive Identifiable { public var id: String { absoluteString } }
 
-    var body: some View {
-        NavigationStack {
-            List {
-                if loaded && items.isEmpty {
-                    Text("Nothing here yet.").foregroundStyle(Theme.muted).listRowBackground(Theme.bg)
-                }
-                ForEach(items) { n in
-                    Button { open(n) } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(n.title).font(Theme.body(15, .bold))
-                                Spacer()
-                                Text(Format.relative(n.createdAt)).font(Theme.body(11)).foregroundStyle(Theme.muted)
-                            }
-                            Text(n.body).font(Theme.body(14)).foregroundStyle(n.read ? Theme.muted : Theme.text)
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    .listRowBackground(Theme.surface)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Theme.bg)
-            .navigationTitle("Notifications")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-        }
-        .task {
-            if let r: NotificationsResponse = try? await APIClient.shared.request("GET", "/me/notifications") { items = r.notifications }
-            loaded = true
-            _ = try? await APIClient.shared.raw("POST", "/me/notifications/read-all")
-        }
-    }
-
-    private func open(_ n: AppNotification) {
-        Task { _ = try? await APIClient.shared.raw("POST", "/me/notifications/\(n.id)/event", body: ["event": "opened"]) }
-        dismiss()
-        if let e = n.payload["expense_id"]?.intValue { state.open(.expense(e)) }
-        else if n.payload["route"]?.stringValue == "wallet" { state.open(.wallet) }
-        else if n.payload["route"]?.stringValue == "redeem" { state.open(.redeem) }
-        else if let g = n.payload["group_id"]?.intValue {
-            state.open(n.payload["route"]?.stringValue == "settle" ? .settle(g) : .group(g))
-        }
-    }
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

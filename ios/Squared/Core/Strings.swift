@@ -5,16 +5,16 @@ enum Strings {
     static let coinsUnavailable = String(localized: "coins.unavailable", defaultValue: "Coins unavailable right now")
     static let thisWeekTogether = String(localized: "household.title", defaultValue: "This week, together")
     static func confirmedOf(_ p: Int, _ t: Int) -> String {
-        String(localized: "household.progress", defaultValue: "\(p) of \(t) expenses confirmed")
+        String(localized: "household.progress", defaultValue: "\(p) of \(t) expenses logged")
     }
     static func reachGoal(_ t: Int, _ reward: Int) -> String {
-        String(localized: "household.reach", defaultValue: "Reach \(t) and the group earns +\(reward)")
+        String(localized: "household.reach", defaultValue: "Log \(t) this week and earn +\(reward)")
     }
     static func goalMet(_ reward: Int) -> String {
-        String(localized: "household.met", defaultValue: "Goal met. +\(reward) for the group.")
+        String(localized: "household.met", defaultValue: "Goal met. +\(reward) coins.")
     }
     static let householdEmpty = String(localized: "household.empty",
-        defaultValue: "Add your first shared expense. When someone confirms it, you both earn coins.")
+        defaultValue: "Add your first shared expense to start earning coins.")
     static func sharedPot(_ c: Int) -> String { String(localized: "household.pot", defaultValue: "Shared pot: \(c)") }
     static func weeksSquared(_ w: Int) -> String { String(localized: "household.squared", defaultValue: "Weeks squared: \(w)") }
 

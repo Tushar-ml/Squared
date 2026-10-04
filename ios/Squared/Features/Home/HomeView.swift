@@ -5,17 +5,8 @@ struct HomeView: View {
     @State private var groups: [GroupSummary] = []
     @State private var friends: [Friend] = []
     @State private var showAddFriend = false
-    @State private var inbox: [NeedsYouItem] = []
-    @State private var inboxUnavailable = false
     @State private var loading = true
     @State private var showCreate = false
-    @State private var showJoin = false
-    @State private var showNotifications = false
-    @State private var unread = 0
-    @State private var inviteTarget: InviteTarget?
-    @AppStorage("activatedCardDismissed") private var activatedCardDismissed = false
-
-    struct InviteTarget: Identifiable { let id: Int; let name: String }
 
     var body: some View {
         @Bindable var state = state
@@ -23,17 +14,6 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     header
-                    if let a = state.activation {
-                        if !a.activated {
-                            ActivationChecklist(activation: a) { id, name in inviteTarget = InviteTarget(id: id, name: name) }
-                        } else if !activatedCardDismissed && a.group != nil {
-                            ActivatedCard { withAnimation { activatedCardDismissed = true } }
-                        }
-                    }
-                    if state.coinsLive {
-                        if inboxUnavailable { CoinsUnavailable() }
-                        else if !inbox.isEmpty { NeedsYouSection(items: inbox) { Task { await load() } } }
-                    }
                     groupsSection
                     FriendsSection(friends: friends) { showAddFriend = true }
                     if !groups.isEmpty || !friends.isEmpty { mySpending }
@@ -55,12 +35,7 @@ struct HomeView: View {
         .task { await load() }
         .onChange(of: state.refreshTick) { Task { await load() } }
         .sheet(isPresented: $showCreate) { CreateGroupSheet { id in Task { await load(); state.open(.group(id)) } } }
-        .sheet(isPresented: $showJoin) { PasteInviteSheet() }
         .sheet(isPresented: $showAddFriend) { AddFriendSheet { id in Task { await load(); state.open(.group(id)) } } }
-        .sheet(item: $inviteTarget, onDismiss: { Task { await load() } }) { t in
-            InviteSheet(groupId: t.id, groupName: t.name, coinsEnabled: true)
-        }
-        .sheet(isPresented: $showNotifications, onDismiss: { Task { await load() } }) { NotificationsInboxView() }
     }
 
     private var header: some View {
@@ -74,16 +49,8 @@ struct HomeView: View {
                 Button { state.open(.wallet) } label: { CoinChip(coins: balance) }
                     .accessibilityHint("Opens your coins")
             }
-            iconButton(unread > 0 ? "bell.badge" : "bell", label: "Notifications") { showNotifications = true }
         }
         .padding(.top, 12)
-    }
-
-    private func iconButton(_ name: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: name).font(.system(size: 17, weight: .semibold)).frame(width: 44, height: 44)
-        }
-        .accessibilityLabel(label)
     }
 
     private var groupsSection: some View {
@@ -91,7 +58,6 @@ struct HomeView: View {
             HStack {
                 SectionLabel("Groups")
                 Spacer()
-                Button("Join with a link") { showJoin = true }.font(Theme.body(13, .semibold)).foregroundStyle(Theme.muted)
             }
             if loading && groups.isEmpty {
                 ForEach(0..<2, id: \.self) { _ in Skeleton(height: 72) }
@@ -99,7 +65,7 @@ struct HomeView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("No groups yet").font(Theme.body(17, .bold))
-                        Text("Start one for your home, a trip, friends or work in under a minute, or open an invite link someone sent you.")
+                        Text("Start one for your home, a trip, friends or work in under a minute.")
                             .font(Theme.body(14)).foregroundStyle(Theme.muted)
                     }
                 }
@@ -131,22 +97,12 @@ struct HomeView: View {
         defer { loading = false }
         if let r: GroupsResponse = try? await APIClient.shared.request("GET", "/groups") { groups = r.groups }
         if let r: FriendsResponse = try? await APIClient.shared.request("GET", "/friends") { friends = r.friends }
-        do {
-            let r: NeedsYou = try await APIClient.shared.request("GET", "/me/inbox/needs-you")
-            inbox = r.items
-            inboxUnavailable = false
-            if !r.items.isEmpty { APIClient.shared.track("coins_card_viewed", props: ["surface": "inbox"]) }
-        } catch let e as APIError where e.isCoinsUnavailable {
-            inboxUnavailable = true
-        } catch {}
-        if let n: NotificationsResponse = try? await APIClient.shared.request("GET", "/me/notifications") { unread = n.unread ?? 0 }
-        await state.refreshActivation()
         await state.refreshCoins(celebrate: false)
         let nets = groups.map(\.myNetPaise) + friends.map(\.myNetPaise)
         let owe = nets.filter { $0 < 0 }.reduce(0, +)
         let owed = nets.filter { $0 > 0 }.reduce(0, +)
         WidgetSnapshot(name: state.user?.name ?? "", coins: state.coinsLive ? state.balance : nil, youOwe: -owe, youAreOwed: owed,
-                       currency: groups.first?.currency ?? "INR", needsYou: inbox.count, updated: Date()).save()
+                       currency: groups.first?.currency ?? "INR", needsYou: 0, updated: Date()).save()
         // a full-screen celebration presented mid pull-to-refresh leaves the refresh control stuck;
         // show it once the list has settled
         Task {
@@ -188,68 +144,5 @@ struct BalanceText: View {
                 Text(Format.money(abs(net), currency)).font(Theme.body(15, .heavy)).foregroundStyle(net > 0 ? Theme.owed : Theme.owe)
             }
         }
-    }
-}
-
-/// S4: pending confirmations and receipts across groups, each with inline one-tap actions.
-struct NeedsYouSection: View {
-    let items: [NeedsYouItem]
-    let onChange: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                SectionLabel("Needs you", color: Theme.coin)
-                Text("\(items.count)").font(.system(size: 11, weight: .black)).foregroundStyle(Theme.onAccent)
-                    .padding(.horizontal, 6).padding(.vertical, 2).background(Theme.coin)
-            }
-            ForEach(items) { item in
-                if let e = item.expense {
-                    NeedsYouExpenseRow(expense: e, groupName: item.groupName, onDone: onChange)
-                } else if let p = item.payment {
-                    NeedsYouPaymentRow(payment: p, groupName: item.groupName, reward: item.receiverReward ?? 0, onDone: onChange)
-                }
-            }
-        }
-    }
-}
-
-struct NeedsYouExpenseRow: View {
-    let expense: Expense
-    let groupName: String
-    let onDone: () -> Void
-    @State private var showDispute = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(expense.createdByName ?? "Someone") added \(expense.description)").font(Theme.body(15, .bold))
-                    Text("\(Format.money(expense.amountPaise, expense.currency)) · your share \(Format.money(expense.mySharePaise, expense.currency)) · \(groupName)")
-                        .font(Theme.body(12)).foregroundStyle(Theme.muted)
-                }
-                Spacer()
-            }
-            ConfirmBar(expense: expense, source: "inbox", compact: true, onDone: onDone, onDispute: { showDispute = true })
-        }
-        .neoPopCard(depth: 4, padding: 14)
-        .sheet(isPresented: $showDispute) { NotRightSheet(expense: expense) { onDone() } }
-    }
-}
-
-struct NeedsYouPaymentRow: View {
-    let payment: Payment
-    let groupName: String
-    let reward: Int
-    let onDone: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(payment.payerName ?? "Someone") says they paid you \(Format.inr(paise: payment.amountPaise))")
-                .font(Theme.body(15, .bold))
-            Text(groupName).font(Theme.body(12)).foregroundStyle(Theme.muted)
-            ReceiptBar(payment: payment, reward: reward, onDone: onDone)
-        }
-        .neoPopCard(depth: 4, padding: 14)
     }
 }

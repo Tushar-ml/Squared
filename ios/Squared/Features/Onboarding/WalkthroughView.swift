@@ -31,16 +31,6 @@ struct WalkthroughView: View {
             }
             .padding(.horizontal, 24)
 
-            if state.pendingJoinToken != nil {
-                HStack(spacing: 10) {
-                    Image(systemName: "envelope.open.fill").foregroundStyle(Theme.onAccent)
-                    Text("You've been invited to split on Squared. Sign up to join.").font(Theme.body(14, .bold)).foregroundStyle(Theme.onAccent)
-                    Spacer()
-                }
-                .padding(12).background(Theme.coin)
-                .padding(.horizontal, 24).padding(.top, 8)
-            }
-
             TabView(selection: $page) {
                 ForEach(slides.indices, id: \.self) { i in
                     VStack(alignment: .leading, spacing: 18) {
@@ -67,8 +57,8 @@ struct WalkthroughView: View {
                 NeoPopFloatingButton(title: page < slides.count - 1 ? "Next" : "Get started") {
                     if page < slides.count - 1 { page += 1 } else { finish(skipped: false) }
                 }
-                Button("I already have an account") { finish(skipped: true) }
-                    .font(Theme.body(14, .semibold)).foregroundStyle(Theme.muted).frame(minHeight: 44)
+                Text("Everything stays on this phone. No account needed.")
+                    .font(Theme.body(13)).foregroundStyle(Theme.muted).frame(minHeight: 44)
             }
             .padding(.horizontal, 24).padding(.bottom, 8)
         }

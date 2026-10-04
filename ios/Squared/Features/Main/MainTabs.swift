@@ -34,14 +34,12 @@ extension View {
             case .group(let id), .household(let id): GroupView(groupId: id)
             case .expense(let id): ExpenseDetailView(expenseId: id)
             case .wallet: WalletView()
-            case .redeem: RedeemView(groupId: nil)
             case .settle(let id): SettleView(groupId: id, creditorId: nil, showsClose: false)
             case .insights(let id): GroupInsightsView(groupId: id)
             case .mySpending: MyInsightsView()
             case .groupSettings(let id): GroupSettingsView(groupId: id)
             case .recurring(let id): RecurringListView(groupId: id)
             case .search(let id): SearchView(groupId: id)
-            case .chat(let id): ChatView(groupId: id)
             }
         }
     }
