@@ -9,7 +9,11 @@ class Settings:
     invite_secret = os.getenv("INVITE_SECRET", "")
     voucher_key = os.getenv("VOUCHER_KEY", "")
     otp_secret = os.getenv("OTP_SECRET", "")
-    trust_proxy = os.getenv("TRUST_PROXY", "0") == "1"   # read the client IP from X-Forwarded-For (behind a load balancer)
+    trust_proxy = os.getenv("TRUST_PROXY", "0") == "1"
+    storage_backend = os.getenv("STORAGE_BACKEND", "local")   # "local" or "s3" (S3, Cloudflare R2, MinIO)
+    s3_bucket = os.getenv("S3_BUCKET", "")
+    s3_endpoint_url = os.getenv("S3_ENDPOINT_URL", "")         # e.g. https://<account>.r2.cloudflarestorage.com
+    s3_region = os.getenv("S3_REGION", "")   # read the client IP from X-Forwarded-For (behind a load balancer)
     vendor_url = os.getenv("VENDOR_URL", "http://localhost:8090")
     vendor_timeout = float(os.getenv("VENDOR_TIMEOUT_SECONDS", "3"))
     smtp_host = os.getenv("SMTP_HOST", "")
@@ -34,6 +38,8 @@ class Settings:
                 out.append(f"{name} must be a random value of at least 24 characters")
         if not self.public_base_url.startswith("https://"):
             out.append("PUBLIC_BASE_URL must use https")
+        if self.storage_backend != "s3" or not self.s3_bucket:
+            out.append("STORAGE_BACKEND=s3 and S3_BUCKET are required: local disk doesn't survive deploys")
         return out
 
     def assert_safe_for_production(self) -> None:

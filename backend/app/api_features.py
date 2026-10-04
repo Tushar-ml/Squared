@@ -1,20 +1,18 @@
 """Everyday Splitwise features: recurring bills, group settings and members, comments, receipts,
 search, budgets, activity feed, group chat and device registration."""
 import json
-import pathlib
 import uuid
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from . import analytics, categories, clock, coin_config, db, domain, events, experiment, fx, i18n, notify, views
+from . import analytics, categories, clock, coin_config, db, domain, events, experiment, fx, i18n, notify, storage, views
 from .api_core import ExpenseIn, _norm_phone, create_expense
 from .deps import current_user, require_member
 
 router = APIRouter(prefix="/api/v1")
-UPLOADS = pathlib.Path(__file__).resolve().parent.parent / "uploads"
 MAX_UPLOAD = 6 * 1024 * 1024
 IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/heic": ".heic", "application/pdf": ".pdf"}
 
@@ -286,10 +284,8 @@ async def upload_attachment(expense_id: int, request: Request, user=Depends(curr
     with db.tx() as conn:
         e = _expense_for(conn, expense_id, user["id"])
         aid = uuid.uuid4()
-        UPLOADS.mkdir(parents=True, exist_ok=True)
         rel = f"{e['group_id']}/{aid}{IMAGE_TYPES[ctype]}"
-        (UPLOADS / str(e["group_id"])).mkdir(parents=True, exist_ok=True)
-        (UPLOADS / rel).write_bytes(data)
+        storage.backend().put(rel, data, ctype)
         conn.execute("""INSERT INTO expense_attachments (id, expense_id, user_id, path, content_type, bytes, created_at)
                         VALUES (%s,%s,%s,%s,%s,%s,%s)""", (aid, expense_id, user["id"], rel, ctype, len(data), clock.now()))
     return {"id": str(aid), "content_type": ctype, "bytes": len(data)}
@@ -312,7 +308,10 @@ def get_attachment(aid: str, user=Depends(current_user)):
         if not r:
             raise HTTPException(404, "Not found")
         require_member(conn, r["group_id"], user["id"])
-    return FileResponse(UPLOADS / r["path"], media_type=r["content_type"])
+    data = storage.backend().get(r["path"])
+    if data is None:
+        raise HTTPException(404, "Not found")
+    return Response(content=data, media_type=r["content_type"], headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.delete("/attachments/{aid}")
@@ -321,7 +320,7 @@ def delete_attachment(aid: str, user=Depends(current_user)):
         r = conn.execute("DELETE FROM expense_attachments WHERE id=%s AND user_id=%s RETURNING path", (aid, user["id"])).fetchone()
         if not r:
             raise HTTPException(404, "Not found")
-    (UPLOADS / r["path"]).unlink(missing_ok=True)
+    storage.backend().delete(r["path"])
     return {"ok": True}
 
 

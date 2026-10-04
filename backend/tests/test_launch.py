@@ -129,6 +129,7 @@ def _prod(**env):
     s.dev_otp = ""
     s.surprise_secret = s.invite_secret = s.voucher_key = s.otp_secret = "x" * 32
     s.public_base_url = "https://api.squared.example"
+    s.storage_backend, s.s3_bucket = "s3", "squared-bills"
     for k, v in env.items():
         setattr(s, k, v)
     return s
@@ -137,9 +138,10 @@ def _prod(**env):
 def test_production_guard_lists_every_unsafe_setting():
     assert _prod().production_problems() == []
     problems = _prod(dev_otp="123456", invite_secret="change-me", voucher_key="",
-                     public_base_url="http://api.squared.example").production_problems()
+                     public_base_url="http://api.squared.example", storage_backend="local").production_problems()
     text = " ".join(problems)
     assert "DEV_OTP" in text and "INVITE_SECRET" in text and "VOUCHER_KEY" in text and "https" in text
+    assert "STORAGE_BACKEND" in text
 
 
 def test_production_guard_blocks_startup():
@@ -148,3 +150,33 @@ def test_production_guard_blocks_startup():
     _prod().assert_safe_for_production()
     dev = Settings(); dev.app_env = "dev"; dev.dev_otp = "123456"
     dev.assert_safe_for_production()                               # dev is never blocked
+
+
+# ---------------------------------------------------------------- bill photos in object storage
+
+def test_bill_photos_round_trip_through_s3(w):
+    import boto3
+    from moto import mock_aws
+    from app import storage
+    with mock_aws():
+        s3 = boto3.client("s3", region_name="ap-south-1")
+        s3.create_bucket(Bucket="squared-bills", CreateBucketConfiguration={"LocationConstraint": "ap-south-1"})
+        storage.use(storage.S3Storage("squared-bills", client=s3))
+        try:
+            w.user("Aman"); w.user("Priya"); w.user("Ravi")
+            g = w.flat("Aman", "Priya")
+            e = w.expense("Aman", g, 300)
+            jpeg = b"\xff\xd8\xff\xe0" + b"x" * 1000
+            r = w.c.post(f"/api/v1/expenses/{e}/attachments", content=jpeg,
+                         headers=w.h("Aman", **{"Content-Type": "image/jpeg"}))
+            assert r.status_code == 200, r.text
+            aid = r.json()["id"]
+            keys = [o["Key"] for o in s3.list_objects_v2(Bucket="squared-bills")["Contents"]]
+            assert keys == [f"{g}/{aid}.jpg"]
+            got = w.c.get(f"/api/v1/attachments/{aid}", headers=w.h("Priya"))
+            assert got.status_code == 200 and got.content == jpeg and got.headers["content-type"] == "image/jpeg"
+            assert w.c.get(f"/api/v1/attachments/{aid}", headers=w.h("Ravi")).status_code == 403   # not in the group
+            assert w.c.delete(f"/api/v1/attachments/{aid}", headers=w.h("Aman")).status_code == 200
+            assert s3.list_objects_v2(Bucket="squared-bills").get("KeyCount") == 0
+        finally:
+            storage.use(None)
