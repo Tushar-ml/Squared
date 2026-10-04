@@ -25,7 +25,8 @@ DEFAULT_CONFIG = {
     "caps": {"user_daily": 60, "user_monthly": 600, "group_daily_rewarded_expenses": 8,
              "pair_daily_confirmations": 5},
     "expiry_months": 12, "expiry_push_days": 30,
-    "redemption": {"min_account_age_days": 7, "max_per_user_per_week": 2, "first_redemption_hold_hours": 48},
+    "redemption": {"enabled": False,  # vouchers launch later; coins keep accruing meanwhile
+                   "min_account_age_days": 7, "max_per_user_per_week": 2, "first_redemption_hold_hours": 48},
     "confirmation": {"payment_unverified_after_days": 7, "expense_unconfirmed_label_after_days": 7},
     "push": {"max_per_user_per_day": 2, "quiet_start": "22:00", "quiet_end": "08:00",
              "batch_window_minutes": 10, "digest_hour": 20, "recap_hour": 10,

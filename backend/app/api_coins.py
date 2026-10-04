@@ -317,7 +317,8 @@ def catalog(scope: str | None = None, group_id: int | None = None, user=Depends(
             out.append({"id": str(it["id"]), "scope": it["scope"], "brand": it["brand"], "category": it["category"],
                         "face_value_inr": it["face_value_inr"], "coin_cost": it["coin_cost"],
                         "affordable": bal >= it["coin_cost"], "coins_needed": max(0, it["coin_cost"] - bal)})
-        return {"items": out, "balance": max(w["balance_cached"], 0), "pot_balance": pot["balance_cached"] if pot else None}
+        return {"items": out, "balance": max(w["balance_cached"], 0), "pot_balance": pot["balance_cached"] if pot else None,
+                "redemption_enabled": bool(cfg["redemption"].get("enabled"))}
 
 
 class RedeemIn(BaseModel):

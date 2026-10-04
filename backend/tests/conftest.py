@@ -42,7 +42,7 @@ def _clean(monkeypatch):
     # tests run at a fixed daytime IST moment unless they travel
     clock.set_now(clock.ist().replace(hour=12, minute=0, second=0, microsecond=0).astimezone(clock.IST))
     seed.ensure_base()
-    set_config({"experiment": {"treatment_share": 1.0}})
+    set_config({"experiment": {"treatment_share": 1.0}, "redemption": {"enabled": True}})
     monkeypatch.setattr(redemption, "vendor", FakeVendor())
     from app import fx
     monkeypatch.setattr(fx, "FETCHERS", [FakeFx.fetch])   # never hit the network in tests

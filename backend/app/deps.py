@@ -9,7 +9,7 @@ def current_user(authorization: str | None = Header(default=None)) -> dict:
     token = authorization.split(" ", 1)[1].strip()
     with db.tx() as conn:
         u = conn.execute(
-            "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token=%s", (token,)).fetchone()
+            "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token=%s AND u.deleted_at IS NULL", (token,)).fetchone()
     if not u:
         raise HTTPException(401, "Session expired")
     return u

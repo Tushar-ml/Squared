@@ -123,6 +123,8 @@ def _write(conn, cands: list[Candidate], *, source_type, source_id, source_versi
 
 
 def _maybe_first_redeem_push(conn, user_ids, cfg, group_id=None):
+    if not cfg["redemption"].get("enabled"):
+        return   # don't invite people to redeem before vouchers are live
     for uid in set(user_ids):
         w = ledger.get_wallet(conn, "USER", uid)
         if w["balance_cached"] >= cfg["push"]["first_redeem_threshold"]:

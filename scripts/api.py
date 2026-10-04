@@ -1,5 +1,6 @@
 """Tiny CLI client for poking the local API: python3 scripts/api.py <phone> <METHOD> <path> [json]"""
 import json
+import pathlib
 import sys
 import urllib.request
 
@@ -21,9 +22,22 @@ def call(method, path, body=None, token=None, headers=None):
         return e.code, json.loads(e.read() or b"{}")
 
 
+TOKENS = pathlib.Path(__file__).resolve().parent.parent / ".docker" / "cli-tokens.json"  # git-ignored
+
+
 def login(phone):
-    call("POST", "/auth/otp/request", {"phone": phone})
-    return call("POST", "/auth/otp/verify", {"phone": phone, "otp": OTP, "device_id": "cli-" + phone})[1]["token"]
+    """Reuse a saved session: OTP sends are rate limited (one per 30s, five per hour per number)."""
+    saved = json.loads(TOKENS.read_text()) if TOKENS.exists() else {}
+    if saved.get(phone) and call("GET", "/me", token=saved[phone])[0] == 200:
+        return saved[phone]
+    st, out = call("POST", "/auth/otp/request", {"phone": phone})
+    if st != 200:
+        sys.exit(f"OTP request failed ({st}): {out.get('detail')}")
+    token = call("POST", "/auth/otp/verify", {"phone": phone, "otp": OTP, "device_id": "cli-" + phone})[1]["token"]
+    saved[phone] = token
+    TOKENS.parent.mkdir(exist_ok=True)
+    TOKENS.write_text(json.dumps(saved))
+    return token
 
 
 if __name__ == "__main__":

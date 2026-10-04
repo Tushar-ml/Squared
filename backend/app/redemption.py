@@ -106,6 +106,8 @@ def start(user_id: int, item_id: str, group_id: int | None, idem: str) -> dict:
             return existing
         if not cfg["enabled"] or cfg["kill_switch"]:
             raise RedeemError("unavailable", "Coins unavailable right now", 503)
+        if not cfg["redemption"].get("enabled"):
+            raise RedeemError("coming_soon", "Redeeming coins is coming soon. Your coins are saved until then.", 403)
         user = conn.execute("SELECT * FROM users WHERE id=%s", (user_id,)).fetchone()
         item = conn.execute("SELECT * FROM catalog_items WHERE id=%s AND active", (item_id,)).fetchone()
         if not item:

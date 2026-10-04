@@ -14,7 +14,8 @@ up: backend/.env.dev   ## start db, api, worker, vendor sandbox, mailpit
 backend/.env.dev:      ## first run: local env from the example, with random secrets
 	sed -e "s/^SURPRISE_SECRET=.*/SURPRISE_SECRET=$$(openssl rand -hex 24)/" \
 	    -e "s/^INVITE_SECRET=.*/INVITE_SECRET=$$(openssl rand -hex 24)/" \
-	    -e "s/^VOUCHER_KEY=.*/VOUCHER_KEY=$$(openssl rand -hex 24)/" backend/.env.example > $@
+	    -e "s/^VOUCHER_KEY=.*/VOUCHER_KEY=$$(openssl rand -hex 24)/" \
+	    -e "s/^OTP_SECRET=.*/OTP_SECRET=$$(openssl rand -hex 24)/" backend/.env.example > $@
 
 down:
 	$(DC) down

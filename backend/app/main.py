@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import activation, api_admin, api_coins, api_core, api_features, api_insights, db, seed
+from .settings import settings
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Squared API", version="1.0.0")
@@ -17,6 +18,7 @@ STATIC = pathlib.Path(__file__).parent / "static"
 
 @app.on_event("startup")
 def startup():
+    settings.assert_safe_for_production()
     db.init_pool()
     db.migrate()
     seed.ensure_base()
