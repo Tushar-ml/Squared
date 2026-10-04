@@ -16,7 +16,9 @@ final class APIClient {
 
     var token: String?
     var baseURL: URL {
+        #if DEBUG
         if let s = UserDefaults.standard.string(forKey: "apiBaseURL"), let u = URL(string: s) { return u }
+        #endif
         let plist = Bundle.main.object(forInfoDictionaryKey: "RCAPIBaseURL") as? String ?? "http://localhost:8080"
         return URL(string: plist)!
     }

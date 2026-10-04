@@ -376,6 +376,7 @@
 				19D5D2946492B8CB00647730 /* Resources */,
 				E50C1B3877F9A914C6F59B0B /* Frameworks */,
 				26B86EFD24C0F78D4A0392BF /* Embed Foundation Extensions */,
+				1ED81E5E243838C1FA3D8A8E /* Release checks */,
 			);
 			buildRules = (
 			);
@@ -485,6 +486,28 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		1ED81E5E243838C1FA3D8A8E /* Release checks */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Release checks";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$CONFIGURATION\" != \"Release\" ]; then exit 0; fi\ncase \"$SQUARED_API_BASE_URL $SQUARED_LINK_DOMAIN\" in\n  *CHANGE-ME*) echo \"error: set SQUARED_API_BASE_URL and SQUARED_LINK_DOMAIN for Release in ios/project.yml\"; exit 1 ;;\nesac\n# local-network exception is for the dev stack only\n/usr/libexec/PlistBuddy -c \"Delete :NSAppTransportSecurity:NSAllowsLocalNetworking\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\" 2>/dev/null || true\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		BCCCC049D315B699D0C25ED9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -592,6 +615,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios;
 				SDKROOT = iphoneos;
+				SQUARED_API_BASE_URL = "https://api.CHANGE-ME";
+				SQUARED_LINK_DOMAIN = "CHANGE-ME";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -677,6 +702,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.squared.ios;
 				SDKROOT = iphoneos;
+				SQUARED_API_BASE_URL = "http://localhost:8080";
+				SQUARED_LINK_DOMAIN = localhost;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;

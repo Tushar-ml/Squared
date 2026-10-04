@@ -58,7 +58,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Attach a photo of a bill to an expense.</string>
 	<key>RCAPIBaseURL</key>
-	<string>http://localhost:8080</string>
+	<string>$(SQUARED_API_BASE_URL)</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

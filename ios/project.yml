@@ -28,6 +28,7 @@ targets:
       path: Squared/Resources/Squared.entitlements
       properties:
         com.apple.security.application-groups: [group.app.squared.ios]
+        com.apple.developer.associated-domains: ["applinks:$(SQUARED_LINK_DOMAIN)"]
     info:
       path: Squared/Resources/Info.plist
       properties:
@@ -46,13 +47,32 @@ targets:
           - CFBundleURLName: app.squared.ios
             CFBundleURLSchemes: [squared]
         LSApplicationQueriesSchemes: [upi, whatsapp, phonepe, gpay, paytmmp]
-        RCAPIBaseURL: http://localhost:8080
+        RCAPIBaseURL: $(SQUARED_API_BASE_URL)
     settings:
+      configs:
+        # Set the production values once the domain is decided (docs/PRODUCTION.md, D4).
+        # Release builds refuse to finish while they still say CHANGE-ME.
+        Debug:
+          SQUARED_API_BASE_URL: http://localhost:8080
+          SQUARED_LINK_DOMAIN: localhost
+        Release:
+          SQUARED_API_BASE_URL: https://api.CHANGE-ME
+          SQUARED_LINK_DOMAIN: CHANGE-ME
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.squared.ios
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         TARGETED_DEVICE_FAMILY: "1"
+    postBuildScripts:
+      - name: Release checks
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "$CONFIGURATION" != "Release" ]; then exit 0; fi
+          case "$SQUARED_API_BASE_URL $SQUARED_LINK_DOMAIN" in
+            *CHANGE-ME*) echo "error: set SQUARED_API_BASE_URL and SQUARED_LINK_DOMAIN for Release in ios/project.yml"; exit 1 ;;
+          esac
+          # local-network exception is for the dev stack only
+          /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$TARGET_BUILD_DIR/$INFOPLIST_PATH" 2>/dev/null || true
   SquaredWidget:
     type: app-extension
     platform: iOS

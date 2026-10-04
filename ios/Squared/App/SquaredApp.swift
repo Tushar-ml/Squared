@@ -32,6 +32,7 @@ struct SquaredApp: App {
                 .preferredColorScheme(state.appearance.scheme)
                 .tint(Theme.text)
                 .onOpenURL { state.handle(url: $0) }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { a in if let u = a.webpageURL { state.handle(url: u) } }
                 .task {
                     if state.faceIDEnabled && state.signedIn == false && Keychain.read("token") != nil { state.locked = true }
                     await state.bootstrap()

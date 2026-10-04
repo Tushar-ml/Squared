@@ -19,7 +19,8 @@ struct WalletView: View {
                 } else if let w = wallet {
                     balanceCard(w)
                     HStack(spacing: 12) {
-                        NeoPopButton(title: "Redeem", style: .elevatedCoin, icon: "gift.fill", enabled: !w.redemptionFrozen) {
+                        NeoPopButton(title: state.redemptionLive ? "Redeem" : "Vouchers", style: .elevatedCoin,
+                                     icon: "gift.fill", enabled: !w.redemptionFrozen) {
                             showRedeem = true
                         }
                         if let pot = w.householdPots.first {
@@ -27,6 +28,10 @@ struct WalletView: View {
                                 state.open(.group(pot.groupId))
                             }
                         }
+                    }
+                    if !state.redemptionLive {
+                        Text("Vouchers are coming soon. Your coins are saved until then.")
+                            .font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
                     if let notice = w.capNotice {
                         Text(notice.message).font(Theme.body(13)).foregroundStyle(Theme.muted)
@@ -180,11 +185,21 @@ struct RedeemView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 if let c = catalog {
+                    if c.redemptionEnabled == false {
+                        Card {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Vouchers are coming soon").font(Theme.body(17, .bold))
+                                Text("Keep earning: your coins are saved and you'll be able to spend them here once vouchers launch.")
+                                    .font(Theme.body(14)).foregroundStyle(Theme.muted)
+                            }
+                        }
+                    }
                     HStack {
                         CoinChip(coins: c.balance)
                         Text(Format.coinsInr(c.balance, coinValue: state.coinValue)).font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
                     section("Personal", items: c.items.filter { $0.scope == "USER" })
+                        .disabled(c.redemptionEnabled == false).opacity(c.redemptionEnabled == false ? 0.55 : 1)
                     if !pots.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             if pots.count > 1 {
@@ -195,6 +210,7 @@ struct RedeemView: View {
                             if let pb = c.potBalance { Text("Shared pot: \(pb) coins").font(Theme.body(13, .semibold)).foregroundStyle(Theme.coin) }
                         }
                         section("Group pot", items: c.items.filter { $0.scope == "GROUP" })
+                            .disabled(c.redemptionEnabled == false).opacity(c.redemptionEnabled == false ? 0.55 : 1)
                     }
                     if !history.isEmpty { historySection }
                 } else if let error {
@@ -208,7 +224,7 @@ struct RedeemView: View {
             .padding(20)
         }
         .background(Theme.bg)
-        .navigationTitle("Redeem")
+        .navigationTitle(catalog?.redemptionEnabled == false ? "Vouchers" : "Redeem")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .onChange(of: potGroup) { Task { await loadCatalog() } }

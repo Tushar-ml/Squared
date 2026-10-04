@@ -223,7 +223,7 @@ struct CatalogItem: Codable, Identifiable, Hashable {
     let coinsNeeded: Int
 }
 
-struct Catalog: Codable { let items: [CatalogItem]; let balance: Int; let potBalance: Int? }
+struct Catalog: Codable { let items: [CatalogItem]; let balance: Int; let potBalance: Int?; var redemptionEnabled: Bool? = nil }
 
 struct Redemption: Codable, Identifiable, Hashable {
     let id: String
@@ -292,7 +292,10 @@ struct CoinConfig: Codable {
     let coinsPerInr: Int
     let earn: EarnConfig
     let surprise: Surprise
+    var redemption: RedemptionConfig?
 }
+
+struct RedemptionConfig: Codable { var enabled: Bool? }
 
 /// Minimal JSON value for free-form payloads.
 enum JSONValue: Codable, Hashable {

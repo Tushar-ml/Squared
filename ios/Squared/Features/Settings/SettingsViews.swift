@@ -63,6 +63,10 @@ struct SettingsView: View {
     @State private var prefs: [NotificationPref] = []
     @State private var hideCoins = false
     @State private var loaded = false
+    @State private var confirmDelete = false
+    @State private var deleting = false
+    @State private var deleteError: String?
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -103,8 +107,23 @@ struct SettingsView: View {
                     ForEach($prefs) { $p in NeoPopToggle(label: p.label, isOn: $p.enabled) }
                     Text("We send at most 2 coin notifications a day and none between 10 pm and 8 am.")
                         .font(Theme.body(12)).foregroundStyle(Theme.muted)
+                    SectionLabel("About")
+                    VStack(alignment: .leading, spacing: 0) {
+                        linkRow("Terms of use", "legal/terms")
+                        linkRow("Privacy policy", "legal/privacy")
+                        linkRow("Help and support", "support")
+                    }
                     NeoPopButton(title: "Sign out", style: .flatStroke, height: 44) { state.signOut(); if showsDone { dismiss() } }
                         .padding(.top, 12)
+                    Button(role: .destructive) { confirmDelete = true } label: {
+                        HStack(spacing: 8) {
+                            if deleting { ProgressView().controlSize(.small) }
+                            Text("Delete account").font(Theme.body(15, .semibold))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .foregroundStyle(Theme.owe)
+                    .disabled(deleting)
                     Text("Squared \(APIClient.appVersion) · \(APIClient.shared.baseURL.host() ?? "")")
                         .font(Theme.body(11)).foregroundStyle(Theme.muted)
                 }
@@ -134,7 +153,41 @@ struct SettingsView: View {
             }
         }
         .onChange(of: hideCoins) { _, v in if loaded { Task { await setHide(v) } } }
+        .alert("Delete your account?", isPresented: $confirmDelete) {
+            Button("Delete account", role: .destructive) { Task { await deleteAccount() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your name, phone number and coins are removed. Shared expenses stay in each group as \"Deleted user\" so everyone's balances stay correct. This can't be undone.")
+        }
+        .alert("Can't delete yet", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(deleteError ?? "") }
         .onChange(of: prefs) { old, new in if loaded && !old.isEmpty { Task { await save(new) } } }
+    }
+
+    private func linkRow(_ title: String, _ path: String) -> some View {
+        Button { openURL(APIClient.shared.baseURL.appending(path: path)) } label: {
+            HStack {
+                Text(title).font(Theme.body(15, .semibold))
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.muted)
+            }
+            .frame(minHeight: 44)
+        }
+        .foregroundStyle(Theme.text)
+    }
+
+    private func deleteAccount() async {
+        deleting = true
+        defer { deleting = false }
+        do {
+            _ = try await APIClient.shared.raw("DELETE", "/me")
+            state.signOut(local: true)
+            if showsDone { dismiss() }
+            state.showToast("Your account was deleted")
+        } catch {
+            deleteError = error.localizedDescription
+        }
     }
 
     private func load() async {

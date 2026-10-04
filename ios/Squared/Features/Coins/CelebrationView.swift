@@ -89,6 +89,8 @@ struct BonusOddsSheet: View {
             oddsRow("No bonus", 1 - (s?.pAny ?? 0.20))
             Text("The draw happens once per payment on our server, so retrying can't change it.")
                 .font(Theme.body(12)).foregroundStyle(Theme.muted)
+            Text("Coins have no cash value. Apple is not a sponsor of, and is not involved in, this programme.")
+                .font(Theme.body(12)).foregroundStyle(Theme.muted)
             Spacer()
         }
         .padding(24)

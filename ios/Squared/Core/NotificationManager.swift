@@ -35,6 +35,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     func startPolling() {
+        #if !DEBUG
+        return   // release builds get real pushes through APNs; the pull loop is only for the local stack
+        #endif
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 8, repeats: true) { [weak self] _ in self?.poll() }
         poll()

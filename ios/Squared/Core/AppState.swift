@@ -199,6 +199,11 @@ final class AppState {
     }
 
     func handle(url: URL) {
+        // Universal Link: https://<link domain>/j/<token> opens straight into the join flow
+        if url.scheme == "https", url.pathComponents.count == 3, url.pathComponents[1] == "j" {
+            pendingJoinToken = url.pathComponents[2]
+            return
+        }
         guard url.scheme == "squared" else { return }
         #if DEBUG
         if DebugAutomation.handle(url, self) { return }
@@ -208,6 +213,9 @@ final class AppState {
             pendingJoinToken = token
         }
     }
+
+    /// Vouchers launch later; until then the catalogue is a preview and coins just accrue.
+    var redemptionLive: Bool { config?.redemption?.enabled ?? false }
 
     func open(_ route: Route) {
         tab = .flats

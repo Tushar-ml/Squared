@@ -1,6 +1,6 @@
 # Squared: production launch plan
 
-Status: draft, 4 Oct 2026. Owner: Tushar. Target: India-first iOS launch (INR, en + hi).
+Status: Phase 1 code done 4 Oct 2026 (redemption off). Remaining Phase 1 items need decisions or accounts. Owner: Tushar. Target: India-first iOS launch (INR, en + hi).
 
 The app works end to end locally (FastAPI + Postgres + worker, iOS app + widget, 100 backend
 tests, iOS unit tests). This plan covers what is still missing to run it for real users, in the
@@ -24,24 +24,33 @@ These block later phases. Each has a recommended default.
 
 ## 1. Code changes before any real user (about 1–2 weeks)
 
+**Redemption is off** (`coin_config.redemption.enabled = false`): the server refuses redeems with
+"coming soon", the app shows the catalogue as a dimmed preview, and no "redeem your coins" push goes out.
+Turn it on later with one remote-config publish.
+
+**Still open in Phase 1** (need you): review the legal drafts and set `SUPPORT_EMAIL`; buy the domain and
+set `SQUARED_API_BASE_URL` / `SQUARED_LINK_DOMAIN` for Release in `ios/project.yml` (Release builds fail
+until you do); create the S3/R2 bucket; DLT registration and the SMS template; APNs key; Sentry; app icon
+and screenshots.
+
 ### App Store blockers
-- [ ] **In-app account deletion.** Required by App Store Review Guideline 5.1.1(v). Add `DELETE /me`
+- [x] **In-app account deletion.** Required by App Store Review Guideline 5.1.1(v). Add `DELETE /me`
       (anonymise the user, keep the ledger and expense integrity, remove PII and devices) and a
       "Delete account" flow in Account settings with confirmation.
-- [ ] **Privacy policy, terms and support URLs** hosted on the domain; linked from the app and App
+- [x] **Privacy policy, terms and support URLs** (drafts at `/legal/terms`, `/legal/privacy`, `/support`; **still need your review**) hosted on the domain; linked from the app and App
       Store Connect. Terms must explain coins: no cash value, non-transferable, can expire, can be
       changed or withdrawn.
 - [ ] **App Privacy "nutrition label"** answers in App Store Connect (phone number, name, UPI ID,
       expenses, photos of bills, analytics events, device token).
-- [ ] **Rewards disclosure.** The random "surprise" coin bonus is chance-based. Show the rules in
+- [x] **Rewards disclosure.** The random "surprise" coin bonus is chance-based. Show the rules in
       the app, make clear nothing is bought, and state that Apple is not a sponsor (Guideline 5.3).
 
 ### Security
-- [ ] **OTP abuse limits.** Today `/auth/otp/request` has no rate limit, so anyone can trigger SMS
+- [x] **OTP abuse limits.** Today `/auth/otp/request` has no rate limit, so anyone can trigger SMS
       at your cost, and `/auth/otp/verify` allows unlimited guesses at a 6-digit code. Add: per-phone
       and per-IP send limits with cooldown, max 5 verify attempts per code, short expiry (already
       10 min), and store the code hashed.
-- [ ] **Turn dev behaviour off by configuration.** `APP_ENV=prod` must mean: no `DEV_OTP`, no demo
+- [x] **Turn dev behaviour off by configuration.** `APP_ENV=prod` must mean: no `DEV_OTP`, no demo
       seed, no `dev_hint` in responses. Add a startup check that refuses to boot in prod with a dev
       OTP set or empty secrets.
 - [ ] **Ops console.** `/ops` and `/admin/*` are guarded by an `OPS` role. Keep that, add an audit
@@ -51,10 +60,10 @@ These block later phases. Each has a recommended default.
       in the host's secret store, never in the repo. Generate new values for prod.
 
 ### Infrastructure-facing code
-- [ ] **Bill photos to object storage.** Uploads are written to `backend/uploads/` on local disk,
+- [x] **Bill photos to object storage.** Uploads are written to `backend/uploads/` on local disk,
       which disappears on most PaaS deploys. Move to S3-compatible storage (S3 or Cloudflare R2)
       with private objects and short-lived signed URLs.
-- [ ] **Real push.** Already in place: the APNs adapter (`push.py`, token-based `.p8` auth) and the
+- [x] **Real push** (code side). Already in place: the APNs adapter (`push.py`, token-based `.p8` auth) and the
       app registering for remote notifications and sending its token to `/me/devices`. Left to do:
       configure the APNs key in prod, use the production APNs host (`APNS_SANDBOX=0`) for App Store
       builds, and limit the local-dev pull loop (`/me/notifications/deliver`) to DEBUG builds so
@@ -64,16 +73,16 @@ These block later phases. Each has a recommended default.
 - [ ] **Voucher vendor** (only if D2 = a): replace the mock vendor with the chosen provider's API.
 
 ### iOS release configuration
-- [ ] Release build points `RCAPIBaseURL` at `https://api.<domain>`; Debug keeps `localhost`.
+- [x] Release build points `RCAPIBaseURL` at `https://api.<domain>`; Debug keeps `localhost`.
       (Today it is hard-coded to `http://localhost:8080` for all builds.)
-- [ ] Remove `NSAllowsLocalNetworking` from Release.
-- [ ] **Universal Links** for invites: Associated Domains entitlement `applinks:<domain>` plus an
+- [x] Remove `NSAllowsLocalNetworking` from Release.
+- [x] **Universal Links** for invites (code side; needs the domain and `APPLE_TEAM_ID`): Associated Domains entitlement `applinks:<domain>` plus an
       `apple-app-site-association` file served by the API, so `https://<domain>/j/<token>` opens the
       app directly instead of bouncing through `squared://`.
 - [ ] App icon set, launch screen and App Store screenshots (6.9" and 6.5" iPhone), in light and
       dark.
 - [ ] Crash and error reporting (e.g. Sentry) in the app and the API.
-- [ ] Confirm all automation hooks (`-RCLoginPhone`, `-RCRoute`) stay behind `#if DEBUG`.
+- [x] Confirm all automation hooks (`-RCLoginPhone`, `-RCRoute`) stay behind `#if DEBUG`.
 
 ---
 
