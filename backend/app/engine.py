@@ -191,7 +191,7 @@ def on_expense_confirmed(conn, ev, cfg):
     adder = e["created_by"]
     if mine is None or confirmer == adder or confirmer not in domain.participants(e):  # AB-1
         return
-    verified = conn.execute("SELECT phone_verified FROM users WHERE id=%s", (confirmer,)).fetchone()["phone_verified"]
+    verified = conn.execute("SELECT verified FROM users WHERE id=%s", (confirmer,)).fetchone()["verified"]
     if not verified:
         return
     if e["amount_paise"] < cfg["min_expense_inr"] * 100 or _shared_device_group(conn, gid):  # AB-2
@@ -346,7 +346,7 @@ def on_payment_confirmed(conn, ev, cfg):
     if not ok:
         return
     payer, receiver = p["payer_id"], p["receiver_id"]
-    if not conn.execute("SELECT phone_verified FROM users WHERE id=%s", (receiver,)).fetchone()["phone_verified"]:
+    if not conn.execute("SELECT verified FROM users WHERE id=%s", (receiver,)).fetchone()["verified"]:
         return
     cleared = (payer, receiver) not in domain.pair_debts(conn, gid)
     if p["amount_paise"] < cfg["min_payment_inr"] * 100 and not cleared:

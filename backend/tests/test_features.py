@@ -295,15 +295,14 @@ def test_owed_person_can_remind_once_per_cooldown_in_debtor_language(w):
 
 # ---------------------------------------------------------------- friends: 1:1 splits
 
-def test_add_friend_by_phone_makes_one_pair_group_named_after_them(w):
+def test_add_friend_by_email_makes_one_pair_group_named_after_them(w):
     a, b = w.user("Aman"), w.user("Priya")
     w.user("Ravi")
-    priya_phone = w.phones["Priya"]
-    f = w.req("Aman", "POST", "/friends", {"phone": priya_phone})
+    f = w.req("Aman", "POST", "/friends", {"email": "  Priya@Example.com "})     # case and spaces don't matter
     assert f["created"] and f["name"] == "Priya" and f["user_id"] == b
-    again = w.req("Aman", "POST", "/friends", {"phone": priya_phone})
+    again = w.req("Aman", "POST", "/friends", {"email": w.emails["Priya"]})
     assert not again["created"] and again["group_id"] == f["group_id"]
-    back = w.req("Priya", "POST", "/friends", {"phone": w.phones["Aman"]})
+    back = w.req("Priya", "POST", "/friends", {"email": w.emails["Aman"]})
     assert back["group_id"] == f["group_id"] and back["name"] == "Aman"
     gid = f["group_id"]
     # each side sees the other's name; friend pairs don't clutter the groups list
@@ -315,8 +314,9 @@ def test_add_friend_by_phone_makes_one_pair_group_named_after_them(w):
     w.confirm("Priya", e)
     fr = w.req("Aman", "GET", "/friends")["friends"]
     assert len(fr) == 1 and fr[0]["name"] == "Priya" and fr[0]["my_net_paise"] == 30000 and fr[0]["coins_enabled"]
-    w.req("Aman", "POST", "/friends", {"phone": w.phones["Aman"]}, expect=400)
-    w.req("Aman", "POST", "/friends", {"phone": "+919111111111"}, expect=404)
+    w.req("Aman", "POST", "/friends", {"email": w.emails["Aman"]}, expect=400)
+    w.req("Aman", "POST", "/friends", {"email": "nobody@example.com"}, expect=404)
+    w.req("Aman", "POST", "/friends", {"email": "not-an-email"}, expect=400)
     _ = a
 
 

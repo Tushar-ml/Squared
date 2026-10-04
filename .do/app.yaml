@@ -34,13 +34,15 @@ services:
       - { key: SURPRISE_SECRET, type: SECRET, value: "__FILL__" }
       - { key: INVITE_SECRET, type: SECRET, value: "__FILL__" }
       - { key: VOUCHER_KEY, type: SECRET, value: "__FILL__" }
-      - { key: OTP_SECRET, type: SECRET, value: "__FILL__" }
       - { key: SUPPORT_EMAIL, value: "__FILL__" }
       - { key: OPERATOR_NAME, value: Squared }
       - { key: IOS_BUNDLE_ID, value: app.squared.ios }
-      - { key: APPLE_TEAM_ID, value: "" }          # set after Apple enrolment (Universal Links)
-      - { key: REVIEW_PHONES, value: "__FILL__" }
-      - { key: REVIEW_OTP, type: SECRET, value: "__FILL__" }
+      - { key: GOOGLE_CLIENT_IDS, value: "__FILL__" }      # iOS OAuth client ID(s) from Google Cloud
+      - { key: GOOGLE_WEB_CLIENT_ID, value: "" }         # optional: Google button on /ops
+      - { key: OPS_EMAILS, value: "__FILL__" }
+      - { key: APPLE_TEAM_ID, value: "" }          # set after Apple enrolment (Universal Links, revocation)
+      - { key: APPLE_SIGNIN_KEY_ID, value: "" }
+      - { key: APPLE_SIGNIN_PRIVATE_KEY, type: SECRET, value: "" }
       - { key: APNS_SANDBOX, value: "1" }          # 0 for App Store builds
       - { key: VENDOR_URL, value: "" }             # vouchers are off (redemption.enabled = false)
       - { key: WORKER_POLL_SECONDS, value: "1" }

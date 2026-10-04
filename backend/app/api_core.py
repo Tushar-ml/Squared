@@ -3,8 +3,6 @@
 Writes emit domain events via the outbox in the same transaction. Nothing here calls
 the reward engine, so expenses, balances and payments work even if rewards are down (I-1).
 """
-import hashlib
-import hmac
 import json
 import logging
 import re
@@ -12,143 +10,114 @@ import secrets
 from datetime import timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from . import analytics, categories, clock, coin_config, db, domain, events, experiment, fx, splits, views
+from . import analytics, auth, categories, clock, coin_config, db, domain, events, experiment, fx, splits, views
 from .deps import current_user, require_member
 from .settings import settings
 
 router = APIRouter(prefix="/api/v1")
 log = logging.getLogger("core")
-PHONE_RE = re.compile(r"^\+?[0-9]{10,15}$")
 
 
 # ---------------------------------------------------------------- auth
 
-class OtpRequest(BaseModel):
-    phone: str
-
-
-class OtpVerify(BaseModel):
-    phone: str
-    otp: str
+class GoogleIn(BaseModel):
+    id_token: str
+    nonce: str
     device_id: str | None = None
 
 
-def _norm_phone(p: str) -> str:
-    p = p.replace(" ", "").replace("-", "")
-    if not PHONE_RE.match(p):
-        raise HTTPException(400, "Enter a valid phone number")
-    if len(p) == 10 and not p.startswith("+"):
-        p = "+91" + p
-    return p if p.startswith("+") else "+" + p
+class AppleIn(BaseModel):
+    identity_token: str
+    nonce: str
+    name: str | None = Field(default=None, max_length=60)      # Apple only shares the name on the first sign-in
+    authorization_code: str | None = None
+    device_id: str | None = None
 
 
-# Abuse limits: each code costs an SMS, and a 6-digit code must not be guessable.
-OTP_COOLDOWN = timedelta(seconds=30)
-OTP_PER_PHONE_HOUR = 5
-OTP_PER_IP_HOUR = 20
-OTP_MAX_ATTEMPTS = 5
+class DevLoginIn(BaseModel):
+    email: str
+    name: str | None = None
+    device_id: str | None = None
 
 
-def _otp_hash(phone: str, code: str) -> str:
-    key = (settings.otp_secret or "squared-dev-only").encode()
-    return hmac.new(key, f"{phone}:{code}".encode(), hashlib.sha256).hexdigest()
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def _client_ip(request: Request) -> str | None:
-    if settings.trust_proxy:
-        fwd = request.headers.get("x-forwarded-for", "")
-        if fwd:
-            return fwd.split(",")[0].strip()
-    return request.client.host if request.client else None
+def norm_email(e: str) -> str:
+    e = (e or "").strip().lower()
+    if not EMAIL_RE.match(e):
+        raise HTTPException(400, "Enter a valid email address")
+    return e
 
 
-def _review_phones() -> set[str]:
-    out = set()
-    for p in settings.review_phones.split(","):
-        try:
-            out.add(_norm_phone(p.strip()))
-        except HTTPException:
-            pass
-    return out
+def _ops_emails() -> set[str]:
+    return {e.strip().lower() for e in settings.ops_emails.split(",") if e.strip()}
 
 
-@router.post("/auth/otp/request")
-def otp_request(body: OtpRequest, request: Request):
-    phone = _norm_phone(body.phone)
-    ip = _client_ip(request)
+def _sign_in(ident: "auth.Identity", device_id: str | None, name: str | None = None, apple_refresh: str | None = None):
+    """Find the account by provider id, else by verified email, else create it. Returns a new session."""
+    col = "google_sub" if ident.provider == "google" else "apple_sub"
     now = clock.now()
-    review = bool(settings.review_otp) and phone in _review_phones()
-    if review:
-        code = settings.review_otp
-    elif settings.is_dev and settings.dev_otp:
-        code = settings.dev_otp
-    else:
-        code = f"{secrets.randbelow(10**6):06d}"
     with db.tx() as conn:
-        conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (phone,))
-        last = conn.execute("SELECT max(created_at) t, count(*) FILTER (WHERE created_at > %s) n FROM otp_sends WHERE phone=%s",
-                            (now - timedelta(hours=1), phone)).fetchone()
-        if last["t"] and now - last["t"] < OTP_COOLDOWN:
-            raise HTTPException(429, "Please wait a few seconds before asking for another code.")
-        if last["n"] >= OTP_PER_PHONE_HOUR:
-            raise HTTPException(429, "Too many codes for this number. Please wait an hour and try again.")
-        if ip and conn.execute("SELECT count(*) n FROM otp_sends WHERE ip=%s AND created_at > %s",
-                               (ip, now - timedelta(hours=1))).fetchone()["n"] >= OTP_PER_IP_HOUR:
-            raise HTTPException(429, "Too many sign-in attempts from this network. Please wait and try again.")
-        conn.execute("INSERT INTO otp_sends (phone, ip, created_at) VALUES (%s,%s,%s)", (phone, ip, now))
-        conn.execute("""INSERT INTO otp_codes (phone, code, expires_at, attempts) VALUES (%s,%s,%s,0)
-                        ON CONFLICT (phone) DO UPDATE SET code=EXCLUDED.code, expires_at=EXCLUDED.expires_at, attempts=0""",
-                     (phone, _otp_hash(phone, code), now + timedelta(minutes=10)))
-    from . import sms
-    if not review and not (settings.is_dev and settings.dev_otp):
-        sms.send_otp(phone, code)
-    out = {"phone": phone, "sent": True}
-    if settings.is_dev:
-        out["dev_hint"] = "Local dev: use the DEV_OTP from backend/.env.dev"
-    return out
-
-
-@router.post("/auth/otp/verify")
-def otp_verify(body: OtpVerify):
-    phone = _norm_phone(body.phone)
-    # a wrong guess must be counted even though the request fails, so check in its own transaction
-    with db.tx() as conn:
-        row = conn.execute("SELECT * FROM otp_codes WHERE phone=%s FOR UPDATE", (phone,)).fetchone()
-        if row and row["attempts"] >= OTP_MAX_ATTEMPTS:
-            verdict = "locked"
-        elif not row or row["expires_at"] < clock.now() or not hmac.compare_digest(row["code"], _otp_hash(phone, body.otp)):
-            verdict = "wrong"
-            if row:
-                conn.execute("UPDATE otp_codes SET attempts = attempts + 1 WHERE phone=%s", (phone,))
-        else:
-            verdict = "ok"
-            conn.execute("DELETE FROM otp_codes WHERE phone=%s", (phone,))
-    if verdict == "locked":
-        raise HTTPException(429, "Too many tries. Request a new code.")
-    if verdict == "wrong":
-        raise HTTPException(400, "That code didn't work. Try again.")
-    with db.tx() as conn:
-        user = conn.execute("SELECT * FROM users WHERE phone=%s", (phone,)).fetchone()
-        is_new = user is None
-        if is_new:
+        user = conn.execute(f"SELECT * FROM users WHERE {col}=%s AND deleted_at IS NULL", (ident.sub,)).fetchone()
+        if not user and ident.email and ident.email_verified:
+            user = conn.execute("SELECT * FROM users WHERE email=%s AND deleted_at IS NULL", (ident.email,)).fetchone()
+        display = (ident.name or name or "").strip()[:60]
+        if user is None:
             user = conn.execute(
-                "INSERT INTO users (phone, phone_verified, device_fingerprint, created_at) VALUES (%s, true, %s, %s) RETURNING *",
-                (phone, body.device_id, clock.now())).fetchone()
-            analytics.track(conn, "signup_completed", user_id=user["id"], platform="server")
+                f"""INSERT INTO users (name, email, verified, device_fingerprint, {col}, created_at)
+                    VALUES (%s,%s,true,%s,%s,%s) RETURNING *""",
+                (display, ident.email if ident.email_verified else None, device_id, ident.sub, now)).fetchone()
+            analytics.track(conn, "signup_completed", user_id=user["id"], platform="server", provider=ident.provider)
         else:
-            conn.execute("UPDATE users SET phone_verified=true, device_fingerprint=COALESCE(%s, device_fingerprint) WHERE id=%s",
-                         (body.device_id, user["id"]))
+            user = conn.execute(
+                f"""UPDATE users SET {col}=%s, verified=true, device_fingerprint=COALESCE(%s, device_fingerprint),
+                        name=CASE WHEN name='' THEN %s ELSE name END,
+                        email=COALESCE(email, %s) WHERE id=%s RETURNING *""",
+                (ident.sub, device_id, display, ident.email if ident.email_verified else None, user["id"])).fetchone()
+        if apple_refresh:
+            conn.execute("UPDATE users SET apple_refresh_token=%s WHERE id=%s", (apple_refresh, user["id"]))
+        if user["email"] and user["email"] in _ops_emails() and user["role"] != "OPS":
+            user = conn.execute("UPDATE users SET role='OPS' WHERE id=%s RETURNING *", (user["id"],)).fetchone()
         token = secrets.token_urlsafe(32)
         conn.execute("INSERT INTO sessions (token, user_id, device_id, created_at) VALUES (%s,%s,%s,%s)",
-                     (token, user["id"], body.device_id, clock.now()))
-    return {"token": token, "is_new": is_new or not user["name"], "user": user_json(user)}
+                     (token, user["id"], device_id, now))
+    return {"token": token, "is_new": not user["name"], "user": user_json(user)}
+
+
+@router.get("/auth/config")
+def auth_config():
+    """What the sign-in screens should offer (the ops web page reads the Google client ID from here)."""
+    return {"google_web_client_id": settings.google_web_client_id or None, "dev_login": settings.is_dev}
+
+
+@router.post("/auth/google")
+def google_sign_in(body: GoogleIn):
+    return _sign_in(auth.verify_google(body.id_token, body.nonce), body.device_id)
+
+
+@router.post("/auth/apple")
+def apple_sign_in(body: AppleIn):
+    ident = auth.verify_apple(body.identity_token, body.nonce)
+    refresh = auth.apple_exchange_code(body.authorization_code) if body.authorization_code else None
+    return _sign_in(ident, body.device_id, name=body.name, apple_refresh=refresh)
+
+
+@router.post("/auth/dev")
+def dev_sign_in(body: DevLoginIn):
+    """Local development and tests only: sign in by email without a provider. 404 in production."""
+    if not settings.is_dev:
+        raise HTTPException(404, "Not found")
+    email = norm_email(body.email)
+    ident = auth.Identity("google", f"dev:{email}", email, True, body.name)
+    return _sign_in(ident, body.device_id)
 
 
 def user_json(u: dict) -> dict:
-    return {"id": u["id"], "phone": u["phone"], "name": u["name"], "email": u["email"], "upi_id": u["upi_id"],
+    return {"id": u["id"], "name": u["name"], "email": u["email"], "upi_id": u["upi_id"],
             "role": u["role"], "hide_coins": u["hide_coins"], "intro_seen": u["intro_seen"], "locale": u["locale"],
             "created_at": u["created_at"].isoformat()}
 
@@ -178,10 +147,12 @@ def delete_account(user=Depends(current_user)):
         conn.execute("UPDATE recurring_expenses SET active=false WHERE created_by=%s OR paid_by=%s", (uid, uid))
         for table in ("sessions", "devices", "notifications", "notification_prefs"):
             conn.execute(f"DELETE FROM {table} WHERE user_id=%s", (uid,))
-        conn.execute("DELETE FROM otp_codes WHERE phone=%s", (user["phone"],))
-        conn.execute("""UPDATE users SET name='Deleted user', phone=%s, email=NULL, upi_id=NULL, device_fingerprint=NULL,
-                               deleted_at=%s WHERE id=%s""", (f"deleted:{uid}", now, uid))
+        conn.execute("""UPDATE users SET name='Deleted user', phone=NULL, email=NULL, upi_id=NULL, device_fingerprint=NULL,
+                               google_sub=NULL, apple_sub=NULL, apple_refresh_token=NULL, deleted_at=%s
+                        WHERE id=%s""", (now, uid))
         analytics.track(conn, "account_deleted", user_id=uid)
+    if user["apple_refresh_token"]:
+        auth.apple_revoke(user["apple_refresh_token"])   # App Review: deleting the account revokes Sign in with Apple
     return {"ok": True}
 
 
@@ -273,7 +244,7 @@ def group_detail(group_id: int, user=Depends(current_user)):
         cfg = coin_config.current(conn)
         eligible = views.eligible(conn, group_id, cfg) and not user["hide_coins"]
         members = conn.execute(
-            """SELECT u.id, u.name, u.phone, u.upi_id FROM group_members m JOIN users u ON u.id=m.user_id
+            """SELECT u.id, u.name, u.upi_id FROM group_members m JOIN users u ON u.id=m.user_id
                WHERE m.group_id=%s AND m.left_at IS NULL ORDER BY m.joined_at""", (group_id,)).fetchall()
         exps = conn.execute(
             "SELECT id FROM expenses WHERE group_id=%s AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100",

@@ -154,8 +154,8 @@ def user_names(conn, ids) -> dict[int, str]:
     ids = list({i for i in ids if i is not None})
     if not ids:
         return {}
-    return {r["id"]: (r["name"] or r["phone"][-4:]) for r in
-            conn.execute("SELECT id, name, phone FROM users WHERE id = ANY(%s)", (ids,))}
+    return {r["id"]: (r["name"] or "Someone") for r in
+            conn.execute("SELECT id, name FROM users WHERE id = ANY(%s)", (ids,))}
 
 
 def inr(paise: int) -> str:

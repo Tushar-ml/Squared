@@ -25,11 +25,11 @@ fi
 
 ask() { printf "%s: " "$1" >&2; read -r v; [ -n "$v" ] || { echo "required" >&2; exit 1; }; echo "$v"; }
 SUPPORT_EMAIL="${SUPPORT_EMAIL:-$(ask 'Support email shown on the legal pages')}"
-REVIEW_PHONES="${REVIEW_PHONES:-$(ask 'Review/test phone numbers you control, comma-separated (+91...)')}"
+GOOGLE_CLIENT_IDS="${GOOGLE_CLIENT_IDS:-$(ask 'Google iOS OAuth client ID (Google Cloud > Credentials)')}"
+OPS_EMAILS="${OPS_EMAILS:-$(ask 'Email(s) that get the Ops console, comma-separated')}"
 SPACES_KEY="${SPACES_KEY:-$(ask 'Spaces access key (Console > API > Spaces Keys)')}"
 SPACES_SECRET="${SPACES_SECRET:-$(ask 'Spaces secret key')}"
 S3_BUCKET="${S3_BUCKET:-squared-bills-$(openssl rand -hex 3)}"
-REVIEW_OTP="$(python3 -c 'import secrets; c=f"{secrets.randbelow(900000)+100000}"; print(c)')"
 
 echo "Creating private Spaces bucket $S3_BUCKET in blr1 (skipped if it exists)…"
 (cd "$ROOT" && ./dc.sh run --rm --no-deps -e AWS_ACCESS_KEY_ID="$SPACES_KEY" -e AWS_SECRET_ACCESS_KEY="$SPACES_SECRET" api python -c "
@@ -48,8 +48,8 @@ src, dst = sys.argv[1], sys.argv[2]
 fill = {
     "S3_BUCKET": "$S3_BUCKET", "AWS_ACCESS_KEY_ID": "$SPACES_KEY", "AWS_SECRET_ACCESS_KEY": "$SPACES_SECRET",
     "SURPRISE_SECRET": secrets.token_hex(24), "INVITE_SECRET": secrets.token_hex(24),
-    "VOUCHER_KEY": secrets.token_hex(24), "OTP_SECRET": secrets.token_hex(24),
-    "SUPPORT_EMAIL": "$SUPPORT_EMAIL", "REVIEW_PHONES": "$REVIEW_PHONES", "REVIEW_OTP": "$REVIEW_OTP",
+    "VOUCHER_KEY": secrets.token_hex(24),
+    "SUPPORT_EMAIL": "$SUPPORT_EMAIL", "GOOGLE_CLIENT_IDS": "$GOOGLE_CLIENT_IDS", "OPS_EMAILS": "$OPS_EMAILS",
 }
 out = []
 for line in open(src):
@@ -65,5 +65,4 @@ EOF
 echo "Creating the app (first build takes a few minutes)…"
 doctl apps create --spec "$TMP" --wait --format ID,DefaultIngress,Phase
 echo
-echo "Review sign-in code for $REVIEW_PHONES: $REVIEW_OTP"
-echo "Store it somewhere safe (password manager); it's also in the app's encrypted settings."
+echo "Next: put the app URL above into ios/project.yml (SQUARED_API_BASE_URL / SQUARED_LINK_DOMAIN for Release)."

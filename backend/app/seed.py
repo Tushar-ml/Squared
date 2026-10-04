@@ -17,10 +17,10 @@ CATALOG = [
 # Local dev: every Home group is in treatment and first redemptions are held ~1 minute.
 DEV_OVERRIDES = {"experiment": {"treatment_share": 1.0}, "redemption": {"first_redemption_hold_hours": 0.02}}
 
-DEMO_USERS = [("+919000000001", "Aman", "aman@example.com", "aman@upi"),
-              ("+919000000002", "Priya", "priya@example.com", "priya@upi"),
-              ("+919000000003", "Rahul", "rahul@example.com", "rahul@upi")]
-OPS_USER = ("+919000000099", "Ops Reviewer")
+DEMO_USERS = [("Aman", "aman@example.com", "aman@upi"),
+              ("Priya", "priya@example.com", "priya@upi"),
+              ("Rahul", "rahul@example.com", "rahul@upi")]
+OPS_USER = ("ops@squared.local", "Ops Reviewer")   # dev only; production Ops access comes from OPS_EMAILS
 
 
 def ensure_base(conn=None) -> None:
@@ -39,17 +39,17 @@ def ensure_base(conn=None) -> None:
 
 
 def ensure_demo(conn) -> None:
-    if conn.execute("SELECT 1 FROM users WHERE phone=%s", (OPS_USER[0],)).fetchone():
+    if conn.execute("SELECT 1 FROM users WHERE email=%s", (OPS_USER[0],)).fetchone():
         return
     old = clock.now() - timedelta(days=30)
-    conn.execute("INSERT INTO users (phone, name, phone_verified, role, created_at) VALUES (%s,%s,true,'OPS',%s)",
+    conn.execute("INSERT INTO users (email, name, verified, role, created_at) VALUES (%s,%s,true,'OPS',%s)",
                  (OPS_USER[0], OPS_USER[1], old))
     ids = []
-    for i, (phone, name, email, upi) in enumerate(DEMO_USERS):
+    for i, (name, email, upi) in enumerate(DEMO_USERS):
         ids.append(conn.execute(
-            """INSERT INTO users (phone, name, email, upi_id, phone_verified, device_fingerprint, created_at)
-               VALUES (%s,%s,%s,%s,true,%s,%s) RETURNING id""",
-            (phone, name, email, upi, f"demo-device-{i}", old)).fetchone()["id"])
+            """INSERT INTO users (name, email, upi_id, verified, device_fingerprint, created_at)
+               VALUES (%s,%s,%s,true,%s,%s) RETURNING id""",
+            (name, email, upi, f"demo-device-{i}", old)).fetchone()["id"])
     aman, priya, rahul = ids
     g = conn.execute(
         "INSERT INTO groups (name, group_type, expected_members, created_by, created_at) VALUES ('Flat 4B','HOME',4,%s,%s) RETURNING *",

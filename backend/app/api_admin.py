@@ -25,8 +25,8 @@ def audit(conn, actor, action, target_type, target_id, reason):
 
 def _wallet_json(conn, w):
     if w["owner_type"] == "USER":
-        u = conn.execute("SELECT name, phone FROM users WHERE id=%s", (w["owner_id"],)).fetchone()
-        label = f"{u['name'] or 'User'} ({u['phone']})" if u else f"user {w['owner_id']}"
+        u = conn.execute("SELECT name, email FROM users WHERE id=%s", (w["owner_id"],)).fetchone()
+        label = f"{u['name'] or 'User'} ({u['email'] or 'no email'})" if u else f"user {w['owner_id']}"
     else:
         g = conn.execute("SELECT name FROM groups WHERE id=%s", (w["owner_id"],)).fetchone()
         label = f"Pot: {g['name']}" if g else f"group {w['owner_id']}"
@@ -41,7 +41,7 @@ def search_wallets(query: str = "", ops=Depends(ops_user)):
     q = f"%{query.strip()}%"
     with db.tx() as conn:
         users = [r["id"] for r in conn.execute(
-            "SELECT id FROM users WHERE phone ILIKE %s OR name ILIKE %s OR id::text = %s LIMIT 20", (q, q, query.strip()))]
+            "SELECT id FROM users WHERE email ILIKE %s OR name ILIKE %s OR id::text = %s LIMIT 20", (q, q, query.strip()))]
         groups = [r["id"] for r in conn.execute(
             "SELECT id FROM groups WHERE name ILIKE %s OR id::text = %s LIMIT 20", (q, query.strip()))]
         # a group search also returns its members' wallets
@@ -136,11 +136,11 @@ def ring_report(days: int = 7, min_confirmations: int = 6, ops=Depends(ops_user)
                 flags.append("shared device")
             for u in (ua, ub):
                 if clock.now() - u["created_at"] < timedelta(days=7):
-                    flags.append(f"{u['name'] or u['phone'][-4:]} is a new account")
+                    flags.append(f"{u['name'] or 'Someone'} is a new account")
             if r["volume"] / max(r["n"], 1) < 5000:
                 flags.append("many small expenses")
-            out.append({"users": [{"id": ua["id"], "name": ua["name"], "phone": ua["phone"]},
-                                  {"id": ub["id"], "name": ub["name"], "phone": ub["phone"]}],
+            out.append({"users": [{"id": ua["id"], "name": ua["name"], "email": ua["email"]},
+                                  {"id": ub["id"], "name": ub["name"], "email": ub["email"]}],
                         "confirmations": r["n"], "volume": int(r["volume"]), "coins_between": int(coins),
                         "entry_ids": [str(e["id"]) for e in earns],
                         "group_id": r["group_id"], "flags": flags, "risk": "high" if len(flags) >= 2 else "medium" if flags else "low"})
@@ -195,7 +195,7 @@ def reject(entry_id: str, body: Reason, ops=Depends(ops_user)):
 def redemptions(ops=Depends(ops_user)):
     with db.tx() as conn:
         rows = conn.execute(
-            """SELECT r.id, r.status, r.coins, r.created_at, r.failure_code, c.brand, c.face_value_inr, u.name, u.phone
+            """SELECT r.id, r.status, r.coins, r.created_at, r.failure_code, c.brand, c.face_value_inr, u.name, u.email
                FROM redemptions r JOIN catalog_items c ON c.id=r.catalog_item_id JOIN users u ON u.id=r.redeemed_by
                ORDER BY r.created_at DESC LIMIT 100""").fetchall()
     return {"redemptions": [{**r, "id": str(r["id"]), "created_at": r["created_at"].isoformat()} for r in rows]}

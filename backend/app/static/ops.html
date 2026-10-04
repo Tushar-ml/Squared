@@ -48,19 +48,18 @@
 </header>
 <main>
   <section id="login" class="panel">
-    <p>Sign in with an Ops phone number.</p>
-    <div class="row">
-      <input id="phone" placeholder="+919000000099">
-      <button class="btn ghost" id="sendOtp">Send code</button>
-      <input id="otp" placeholder="OTP" size="8">
-      <button class="btn" id="verify">Sign in</button>
+    <p>Sign in with an account listed in <code>OPS_EMAILS</code>.</p>
+    <div id="googleBtn"></div>
+    <div class="row hidden" id="devLogin">
+      <input id="devEmail" placeholder="ops@squared.local" size="28">
+      <button class="btn" id="devSignIn">Dev sign in</button>
     </div>
     <p id="loginErr" class="err"></p>
   </section>
 
   <section id="tab-wallets" class="tab hidden">
     <div class="panel row">
-      <input id="q" placeholder="Phone, name, user id, group name" size="40">
+      <input id="q" placeholder="Email, name, user id, group name" size="40">
       <button class="btn" id="search">Search</button>
     </div>
     <div class="panel"><table id="walletTable"></table></div>
@@ -132,15 +131,30 @@ async function api(path, opts = {}) {
 const post = (p, b) => api(p, {method: "POST", body: JSON.stringify(b || {})});
 const askReason = (what) => { const r = prompt(`Reason for ${what} (audit-logged):`); if (!r || r.trim().length < 3) { alert("A reason is required."); return null; } return r.trim(); };
 
-$("sendOtp").onclick = async () => { try { await fetch(API + "/auth/otp/request", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({phone: $("phone").value})}); $("loginErr").textContent = "Code sent."; } catch (e) { $("loginErr").textContent = e.message; } };
-$("verify").onclick = async () => {
+async function finishSignIn(path, body) {
   try {
-    const r = await fetch(API + "/auth/otp/verify", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({phone: $("phone").value, otp: $("otp").value})});
+    const r = await fetch(API + path, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
     const b = await r.json(); if (!r.ok) throw new Error(b.detail);
     if (b.user.role !== "OPS") throw new Error("This account doesn't have the Ops role.");
     token = b.token; localStorage.setItem("opsToken", token); boot();
   } catch (e) { $("loginErr").textContent = e.message; }
-};
+}
+$("devSignIn").onclick = () => finishSignIn("/auth/dev", {email: $("devEmail").value});
+(async () => {
+  const cfg = await fetch(API + "/auth/config").then(r => r.json()).catch(() => ({}));
+  if (cfg.dev_login) $("devLogin").classList.remove("hidden");
+  const webId = cfg.google_web_client_id;
+  if (!webId) return;
+  const nonce = crypto.randomUUID();
+  const s = document.createElement("script");
+  s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+  s.onload = () => {
+    google.accounts.id.initialize({client_id: webId, nonce,
+      callback: (resp) => finishSignIn("/auth/google", {id_token: resp.credential, nonce})});
+    google.accounts.id.renderButton($("googleBtn"), {theme: "filled_black", size: "large", text: "signin_with"});
+  };
+  document.head.appendChild(s);
+})();
 
 function show(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
@@ -154,7 +168,7 @@ async function boot() {
   try {
     const me = await api("/me");
     if (me.role !== "OPS") throw new Error();
-    $("who").textContent = me.name + " · " + me.phone;
+    $("who").textContent = me.name + " · " + (me.email || "");
     $("login").classList.add("hidden"); $("nav").classList.remove("hidden"); show("wallets");
   } catch { $("login").classList.remove("hidden"); }
 }
@@ -197,7 +211,7 @@ async function loadRings() {
   const r = await api(`/admin/rings?days=${$("ringDays").value}&min_confirmations=${$("ringMin").value || 6}`);
   ringCache = r.pairs;
   $("ringTable").innerHTML = "<tr><th>Pair</th><th>Confirmations</th><th>Volume</th><th>Coins between</th><th>Flags</th><th></th></tr>" +
-    (r.pairs.length ? r.pairs.map((p, i) => `<tr><td>${p.users.map(u => esc(u.name) + " " + esc(u.phone)).join("<br>")}</td><td>${p.confirmations}</td>
+    (r.pairs.length ? r.pairs.map((p, i) => `<tr><td>${p.users.map(u => esc(u.name) + " " + esc(u.email || "")).join("<br>")}</td><td>${p.confirmations}</td>
     <td>${(p.volume / 100).toFixed(2)}</td><td>${p.coins_between}</td><td><span class="tag">${p.risk}</span> ${p.flags.map(esc).join(", ")}</td>
     <td>${p.entry_ids.length ? `<button class="btn amber" onclick="reverseRing(${i})">Reverse ${p.entry_ids.length} entries</button>` : '<span class="muted">nothing to reverse</span>'}</td></tr>`).join("")
     : '<tr><td colspan="6" class="muted">No suspicious pairs.</td></tr>');
@@ -210,7 +224,7 @@ async function reverseRing(i) {
 async function loadRedemptions() {
   const r = await api("/admin/redemptions");
   $("redTable").innerHTML = "<tr><th>When</th><th>User</th><th>Voucher</th><th>Coins</th><th>Status</th><th></th></tr>" + r.redemptions.map(x =>
-    `<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${esc(x.name)} ${esc(x.phone)}</td><td>${esc(x.brand)} INR ${x.face_value_inr}</td><td>${x.coins}</td>
+    `<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${esc(x.name)} ${esc(x.email || "")}</td><td>${esc(x.brand)} INR ${x.face_value_inr}</td><td>${x.coins}</td>
     <td>${x.status}${x.failure_code ? " · " + esc(x.failure_code) : ""}</td><td>${x.status === "HELD" ? `<button class="btn" onclick="releaseRed('${x.id}')">Release now</button>` : ""}</td></tr>`).join("");
 }
 async function releaseRed(id) { const reason = askReason("releasing this redemption"); if (!reason) return; try { await post(`/admin/redemptions/${id}/release`, {reason}); loadRedemptions(); } catch (e) { alert(e.message); } }

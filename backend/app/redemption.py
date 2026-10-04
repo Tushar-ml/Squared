@@ -80,8 +80,8 @@ def send_email(to: str | None, subject: str, body: str) -> None:
 
 def eligibility_errors(conn, user: dict, cfg, wallet: dict) -> RedeemError | None:
     r = cfg["redemption"]
-    if not user["phone_verified"]:
-        return RedeemError("phone_unverified", "Verify your phone number to redeem.")
+    if not user["verified"]:
+        return RedeemError("unverified", "Sign in with Google or Apple to redeem.")
     if clock.now() - user["created_at"] < timedelta(days=r["min_account_age_days"]):
         return RedeemError("account_too_new", f"Redeeming opens {r['min_account_age_days']} days after you join.")
     week_n = conn.execute(

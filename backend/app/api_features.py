@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from . import analytics, categories, clock, coin_config, db, domain, events, experiment, fx, i18n, notify, storage, views
-from .api_core import ExpenseIn, _norm_phone, create_expense
+from .api_core import ExpenseIn, create_expense, norm_email
 from .deps import current_user, require_member
 
 router = APIRouter(prefix="/api/v1")
@@ -568,7 +568,7 @@ def remind_to_pay(group_id: int, debtor_id: int, user=Depends(current_user)):
 # ---------- friends: 1:1 splits without making a group ----------
 
 class FriendIn(BaseModel):
-    phone: str
+    email: str
 
 
 def _friend_json(conn, g, me: int, cfg) -> dict:
@@ -593,14 +593,14 @@ def list_friends(user=Depends(current_user)):
 
 @router.post("/friends")
 def add_friend(body: FriendIn, user=Depends(current_user)):
-    """Start splitting with someone already on Squared. Returns their 1:1 group (made once per pair)."""
-    phone = _norm_phone(body.phone)
+    """Start splitting with someone already on Squared, found by email. Returns their 1:1 group (made once per pair)."""
+    email = norm_email(body.email)
     with db.tx() as conn:
-        other = conn.execute("SELECT * FROM users WHERE phone=%s", (phone,)).fetchone()
+        other = conn.execute("SELECT * FROM users WHERE email=%s AND deleted_at IS NULL", (email,)).fetchone()
         if not other:
             raise HTTPException(404, "They're not on Squared yet. Send them an invite link instead.")
         if other["id"] == user["id"]:
-            raise HTTPException(400, "That's your own number")
+            raise HTTPException(400, "That's your own email")
         cfg = coin_config.current(conn)
         g = domain.direct_group(conn, user["id"], other["id"])
         created = g is None

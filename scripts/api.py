@@ -1,11 +1,12 @@
-"""Tiny CLI client for poking the local API: python3 scripts/api.py <phone> <METHOD> <path> [json]"""
+"""Tiny CLI client for poking the local API: python3 scripts/api.py <email> <METHOD> <path> [json]
+
+Signs in with the dev-only /auth/dev endpoint (local stack only)."""
 import json
 import pathlib
 import sys
 import urllib.request
 
 BASE = "http://localhost:8080/api/v1"
-OTP = "123456"  # DEV_OTP from backend/.env.dev (see backend/.env.example)
 
 
 def call(method, path, body=None, token=None, headers=None):
@@ -25,24 +26,24 @@ def call(method, path, body=None, token=None, headers=None):
 TOKENS = pathlib.Path(__file__).resolve().parent.parent / ".docker" / "cli-tokens.json"  # git-ignored
 
 
-def login(phone):
-    """Reuse a saved session: OTP sends are rate limited (one per 30s, five per hour per number)."""
+def login(email):
+    """Reuse a saved session, else sign in with the dev-only endpoint."""
     saved = json.loads(TOKENS.read_text()) if TOKENS.exists() else {}
-    if saved.get(phone) and call("GET", "/me", token=saved[phone])[0] == 200:
-        return saved[phone]
-    st, out = call("POST", "/auth/otp/request", {"phone": phone})
+    if saved.get(email) and call("GET", "/me", token=saved[email])[0] == 200:
+        return saved[email]
+    st, out = call("POST", "/auth/dev", {"email": email, "device_id": "cli-" + email})
     if st != 200:
-        sys.exit(f"OTP request failed ({st}): {out.get('detail')}")
-    token = call("POST", "/auth/otp/verify", {"phone": phone, "otp": OTP, "device_id": "cli-" + phone})[1]["token"]
-    saved[phone] = token
+        sys.exit(f"dev sign-in failed ({st}): {out.get('detail')}")
+    token = out["token"]
+    saved[email] = token
     TOKENS.parent.mkdir(exist_ok=True)
     TOKENS.write_text(json.dumps(saved))
     return token
 
 
 if __name__ == "__main__":
-    phone, method, path = sys.argv[1:4]
+    email, method, path = sys.argv[1:4]
     body = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
-    st, out = call(method, path, body, login(phone), {"Idempotency-Key": "cli-" + str(hash(str(sys.argv)))})
+    st, out = call(method, path, body, login(email), {"Idempotency-Key": "cli-" + str(hash(str(sys.argv)))})
     print(st)
     print(json.dumps(out, indent=2))

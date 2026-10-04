@@ -105,20 +105,20 @@ class World:
         self.c = client
         self.tokens = {}
         self.ids = {}
-        self.phones = {}
+        self.emails = {}
 
     def user(self, name, *, age_days=30, device=None, verified=True):
-        phone = "+9190000" + str(len(self.ids) + 10).zfill(5)
+        email = f"{name.lower()}@example.com"
         with db.tx() as c:
             uid = c.execute(
-                "INSERT INTO users (phone, name, email, phone_verified, device_fingerprint, created_at) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-                (phone, name, f"{name.lower()}@example.com", verified, device or f"dev-{name}",
+                "INSERT INTO users (name, email, verified, device_fingerprint, created_at) VALUES (%s,%s,%s,%s,%s) RETURNING id",
+                (name, email, verified, device or f"dev-{name}",
                  clock.now() - timedelta(days=age_days))).fetchone()["id"]
             tok = uuid.uuid4().hex
             c.execute("INSERT INTO sessions (token, user_id) VALUES (%s,%s)", (tok, uid))
         self.tokens[name] = tok
         self.ids[name] = uid
-        self.phones[name] = phone
+        self.emails[name] = email
         return uid
 
     def h(self, name, **extra):

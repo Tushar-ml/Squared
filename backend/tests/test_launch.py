@@ -48,18 +48,20 @@ def test_delete_account_needs_settled_balances(w):
     w.req("Aman", "DELETE", "/me", expect=409)              # being owed also blocks: they'd lose track of it
 
 
-def test_delete_account_anonymises_and_frees_the_phone(w):
+def test_delete_account_anonymises_and_frees_the_email(w):
     a, b = w.user("Aman"), w.user("Priya")
     g = w.flat("Aman", "Priya")
     e = w.expense("Aman", g, 300)
     w.confirm("Priya", e)
     w.pay("Priya", g, "Aman", 150)
-    phone = w.phones["Priya"]
+    email = "priya@example.com"
+    with db.tx() as c:
+        c.execute("UPDATE users SET google_sub='g-priya' WHERE id=%s", (b,))
     w.req("Priya", "DELETE", "/me")
     w.req("Priya", "GET", "/me", expect=401)                 # sessions gone
     with db.tx() as c:
         u = c.execute("SELECT * FROM users WHERE id=%s", (b,)).fetchone()
-        assert u["deleted_at"] is not None and u["phone"] != phone and u["email"] is None and u["upi_id"] is None
+        assert u["deleted_at"] is not None and u["email"] is None and u["upi_id"] is None and u["google_sub"] is None
         assert u["name"] == "Deleted user"
         assert c.execute("SELECT left_at FROM group_members WHERE group_id=%s AND user_id=%s", (g, b)).fetchone()["left_at"]
         assert c.execute("SELECT count(*) n FROM devices WHERE user_id=%s", (b,)).fetchone()["n"] == 0
@@ -67,58 +69,10 @@ def test_delete_account_anonymises_and_frees_the_phone(w):
     d = w.req("Aman", "GET", f"/groups/{g}")
     assert d["payments"][0]["payer_name"] == "Deleted user"
     assert d["my_net_paise"] == 0 and [m["name"] for m in d["members"]] == ["Aman"]
-    # the same number can sign up again as a brand-new account
-    r = w.c.post("/api/v1/auth/otp/request", json={"phone": phone})
-    assert r.status_code == 200
+    # the same person can sign up again later as a brand-new account
+    r = w.c.post("/api/v1/auth/dev", json={"email": email, "name": "Priya"})
+    assert r.status_code == 200 and r.json()["user"]["id"] != b
     _ = a
-
-
-# ---------------------------------------------------------------- OTP abuse limits
-
-def _otp(w, phone, ip="10.0.0.1"):
-    return w.c.post("/api/v1/auth/otp/request", json={"phone": phone}, headers={"X-Forwarded-For": ip})
-
-
-def _verify(w, phone, code):
-    return w.c.post("/api/v1/auth/otp/verify", json={"phone": phone, "otp": code})
-
-
-def test_otp_send_is_rate_limited_per_phone(w):
-    phone = "+919111100001"
-    assert _otp(w, phone).status_code == 200
-    r = _otp(w, phone)
-    assert r.status_code == 429 and "wait" in r.json()["detail"].lower()
-    for _ in range(4):                                    # 1 per 30s, 5 per hour
-        clock.travel(timedelta(seconds=31))
-        assert _otp(w, phone).status_code == 200
-    clock.travel(timedelta(seconds=31))
-    assert _otp(w, phone).status_code == 429
-    clock.travel(timedelta(hours=1))
-    assert _otp(w, phone).status_code == 200
-
-
-def test_otp_send_is_rate_limited_per_ip(w, monkeypatch):
-    from app import api_core
-    monkeypatch.setattr(api_core.settings, "trust_proxy", True)
-    for i in range(20):
-        assert _otp(w, f"+9191111{i:05d}", ip="203.0.113.9").status_code == 200
-    assert _otp(w, "+919111199999", ip="203.0.113.9").status_code == 429
-    assert _otp(w, "+919111199999", ip="203.0.113.10").status_code == 200
-
-
-def test_otp_guesses_are_capped_and_codes_are_stored_hashed(w):
-    phone = "+919111100002"
-    _otp(w, phone)
-    with db.tx() as c:
-        row = c.execute("SELECT * FROM otp_codes WHERE phone=%s", (phone,)).fetchone()
-    assert row["code"] != "123456" and len(row["code"]) == 64     # sha256 hex, never the code itself
-    for _ in range(5):
-        assert _verify(w, phone, "000000").status_code == 400
-    r = _verify(w, phone, "123456")                                # right code, but too late
-    assert r.status_code == 429 and "new code" in r.json()["detail"].lower()
-    clock.travel(timedelta(seconds=31))
-    _otp(w, phone)
-    assert _verify(w, phone, "123456").status_code == 200
 
 
 # ---------------------------------------------------------------- production guard
@@ -126,12 +80,11 @@ def test_otp_guesses_are_capped_and_codes_are_stored_hashed(w):
 def _prod(**env):
     s = Settings()
     s.app_env = "prod"
-    s.dev_otp = ""
-    s.surprise_secret = s.invite_secret = s.voucher_key = s.otp_secret = "x" * 32
+    s.surprise_secret = s.invite_secret = s.voucher_key = "x" * 32
     s.public_base_url = "https://api.squared.example"
     s.storage_backend, s.s3_bucket = "s3", "squared-bills"
     s.support_email, s.apple_team_id = "help@squared.example", "ABCDE12345"
-    s.review_phones, s.review_otp = "", ""
+    s.google_client_ids = "123-ios.apps.googleusercontent.com"
     for k, v in env.items():
         setattr(s, k, v)
     return s
@@ -139,18 +92,18 @@ def _prod(**env):
 
 def test_production_guard_lists_every_unsafe_setting():
     assert _prod().production_problems() == []
-    problems = _prod(dev_otp="123456", invite_secret="change-me", voucher_key="",
+    problems = _prod(invite_secret="change-me", voucher_key="", google_client_ids="",
                      public_base_url="http://api.squared.example", storage_backend="local").production_problems()
     text = " ".join(problems)
-    assert "DEV_OTP" in text and "INVITE_SECRET" in text and "VOUCHER_KEY" in text and "https" in text
-    assert "STORAGE_BACKEND" in text
+    assert "INVITE_SECRET" in text and "VOUCHER_KEY" in text and "https" in text
+    assert "STORAGE_BACKEND" in text and "GOOGLE_CLIENT_IDS" in text
 
 
 def test_production_guard_blocks_startup():
     with pytest.raises(RuntimeError):
-        _prod(dev_otp="123456").assert_safe_for_production()
+        _prod(invite_secret="").assert_safe_for_production()
     _prod().assert_safe_for_production()
-    dev = Settings(); dev.app_env = "dev"; dev.dev_otp = "123456"
+    dev = Settings(); dev.app_env = "dev"; dev.invite_secret = ""
     dev.assert_safe_for_production()                               # dev is never blocked
 
 
@@ -207,29 +160,8 @@ def test_universal_links_file(client, monkeypatch):
     assert d["appIDs"] == ["ABCDE12345.app.squared.ios"] and d["components"] == [{"/": "/j/*"}]
 
 
-# ---------------------------------------------------------------- review / test accounts (no SMS)
-
-def test_review_phones_sign_in_with_fixed_code_without_sms(w, monkeypatch):
-    from app import api_core, sms
-    sent = []
-    monkeypatch.setattr(sms, "send_otp", lambda phone, code: sent.append(phone) or True)
-    monkeypatch.setattr(api_core.settings, "app_env", "prod")      # behave like production: no DEV_OTP
-    monkeypatch.setattr(api_core.settings, "dev_otp", "")
-    monkeypatch.setattr(api_core.settings, "review_phones", "+919000011111, +919000022222")
-    monkeypatch.setattr(api_core.settings, "review_otp", "482915")
-    r = _otp(w, "9000011111")
-    assert r.status_code == 200 and "dev_hint" not in r.json() and sent == []
-    assert _verify(w, "+919000011111", "482915").status_code == 200
-    # anyone else gets a real, random code by SMS and the review code does nothing for them
-    clock.travel(timedelta(seconds=31))
-    assert _otp(w, "+919000033333").status_code == 200 and sent == ["+919000033333"]
-    assert _verify(w, "+919000033333", "482915").status_code == 400
-
-
-def test_production_guard_on_review_code_and_apple_team_id():
-    assert any("REVIEW_OTP" in p for p in _prod(review_phones="+919000011111", review_otp="").production_problems())
-    assert any("REVIEW_OTP" in p for p in _prod(review_phones="+919000011111", review_otp="123456").production_problems())
-    assert _prod(review_phones="+919000011111", review_otp="482915").production_problems() == []
-    # Universal Links can wait for the Apple account: a warning, not a blocker
-    s = _prod(apple_team_id="")
-    assert s.production_problems() == [] and any("APPLE_TEAM_ID" in x for x in s.production_warnings())
+def test_apple_team_id_and_revocation_key_are_warnings_until_enrolment():
+    s = _prod(apple_team_id="", apple_signin_key_id="", apple_signin_private_key="")
+    assert s.production_problems() == []
+    w = " ".join(s.production_warnings())
+    assert "APPLE_TEAM_ID" in w and "APPLE_SIGNIN_KEY_ID" in w
