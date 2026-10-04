@@ -3,7 +3,3 @@ ios/build/
 ios/*.xcodeproj/xcuserdata/
 DerivedData/
 dist/
-# leftovers from the old server, kept out of git
-backend/
-.docker/
-__pycache__/
