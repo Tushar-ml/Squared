@@ -47,6 +47,9 @@ targets:
           - CFBundleURLName: app.squared.ios
             CFBundleURLSchemes: [squared]
         LSApplicationQueriesSchemes: [upi, whatsapp, phonepe, gpay, paytmmp]
+        NSLocalNetworkUsageDescription: Squared finds friends' phones nearby to sync shared groups directly, without the internet.
+        NSBluetoothAlwaysUsageDescription: Squared uses Bluetooth to sync shared groups with friends' phones nearby.
+        NSBonjourServices: [_sqd-sync._tcp, _sqd-sync._udp]
         RCAPIBaseURL: $(SQUARED_API_BASE_URL)
     settings:
       configs:

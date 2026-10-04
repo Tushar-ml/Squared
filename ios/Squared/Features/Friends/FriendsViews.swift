@@ -36,7 +36,7 @@ struct FriendsSection: View {
                                 .background(Theme.surfaceHigh)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Split with one person").font(Theme.body(16, .bold))
-                                Text("No group needed. Dinner, a cab, a gift: add it and they confirm in one tap.")
+                                Text("No group needed. Dinner, a cab, a gift: add it and sync when you meet.")
                                     .font(Theme.body(12)).foregroundStyle(Theme.muted)
                             }
                         }

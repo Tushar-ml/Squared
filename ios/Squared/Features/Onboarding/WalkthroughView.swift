@@ -11,9 +11,9 @@ struct WalkthroughView: View {
 
     private let slides: [(label: String, title: String, body: String)] = [
         ("Split", "Shared bills,\nminus the chasing", "Rent, trips, dinners, gifts. Log it once and everyone sees their share, in a group or with one friend."),
-        ("Confirm", "Everyone agrees\nin one tap", "No more \"did you see my message?\". A quick Confirm and the expense is settled as fair."),
-        ("Together", "Keep it square,\nearn together", "Confirming and settling up earn coins. Hit the weekly goal and the whole group gets a bonus."),
-        ("Spend", "Coins become\nvouchers", "Groceries, food, broadband. 4 coins = INR 1, and your first voucher is just 100 coins."),
+        ("Sync", "Phone to phone,\nno server", "Everything stays on your phone. Meet up, open Sync and your group updates over Wi-Fi or Bluetooth."),
+        ("Together", "Keep it square,\nearn coins", "Logging bills and settling up earn coins. Log 5 in a week for a +120 bonus."),
+        ("Remind", "Get paid back\nwithout the awkward", "Send a friendly reminder with your UPI link. One tap and they can pay you."),
     ]
 
     var body: some View {

@@ -144,10 +144,6 @@ struct ExpenseForm: View {
                     Task { await save() }
                 }
                 .padding(.top, 8)
-                if editing?.confirmation?.status == "CONFIRMED" {
-                    Text("Changing the amount, payer or split resets confirmations. Everyone confirms again and coins are re-earned.")
-                        .font(Theme.body(12)).foregroundStyle(Theme.muted)
-                }
             }
             .padding(20)
         }

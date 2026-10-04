@@ -51,10 +51,19 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Squared uses Bluetooth to sync shared groups with friends' phones nearby.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_sqd-sync._tcp</string>
+		<string>_sqd-sync._udp</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo of a bill to attach it and read the total.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Unlock Squared with Face ID.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Squared finds friends' phones nearby to sync shared groups directly, without the internet.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Attach a photo of a bill to an expense.</string>
 	<key>RCAPIBaseURL</key>

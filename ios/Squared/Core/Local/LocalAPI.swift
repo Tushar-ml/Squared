@@ -111,6 +111,7 @@ final class LocalAPI: @unchecked Sendable {
             if let i = s.people.firstIndex(where: { $0.id == meId }) {
                 if let n = b["name"] as? String { s.people[i].name = String(n.trimmingCharacters(in: .whitespaces).prefix(60)) }
                 if let u = b["upi_id"] as? String { s.people[i].upi = u.isEmpty ? nil : u }
+                s.touchPerson(i)
             }
             if let v = b["hide_coins"] as? Bool { s.hideCoins = v }
             if let v = b["intro_seen"] as? Bool { s.introSeen = v }
@@ -209,6 +210,7 @@ final class LocalAPI: @unchecked Sendable {
                 s.groups[i].currency = c.uppercased()
             }
             if let e = b["expected_members"] as? Int { s.groups[i].expected = e }
+            s.touchGroup(i)
             if let ds = b["default_split"] as? [String: Any] {
                 s.groups[i].defaultSplit = ds.isEmpty ? nil : DefaultSplit(splitType: ds["split_type"] as? String,
                                                                             percents: ds["percents"] as? [String: Double],
@@ -229,7 +231,9 @@ final class LocalAPI: @unchecked Sendable {
             let pid = existing?.id ?? s.newId()
             if existing == nil { s.people.append(.init(id: pid, name: String(name.prefix(60)), upi: upi, isMe: false, createdAt: Date())) }
             else if let upi, let j = s.people.firstIndex(where: { $0.id == pid }) { s.people[j].upi = upi }
-            if !s.groups[i].members.contains(pid) { s.groups[i].members.append(pid) }
+            if s.person(pid)?.uid == nil { s.fillSyncIds() }
+            s.setMember(i, pid, present: true)
+            s.touchGroup(i)
             return pid
         }
         return ["id": pid, "name": name, "is_you": false]
@@ -250,7 +254,8 @@ final class LocalAPI: @unchecked Sendable {
             if let n = nets[pid], n != 0 {
                 throw LocalError(409, "\(s.name(pid)) has an open balance of \(LocalLogic.money(abs(n), s.groups[i].currency)). Settle up first.")
             }
-            s.groups[i].members.removeAll { $0 == pid }
+            s.setMember(i, pid, present: false)
+            s.touchGroup(i)
         }
         return ["ok": true]
     }
@@ -260,6 +265,7 @@ final class LocalAPI: @unchecked Sendable {
             guard let i = s.people.firstIndex(where: { $0.id == pid }) else { throw LocalError(404, "Not found") }
             if let n = b["name"] as? String, !n.trimmingCharacters(in: .whitespaces).isEmpty { s.people[i].name = String(n.prefix(60)) }
             if let u = b["upi_id"] as? String { s.people[i].upi = u.isEmpty ? nil : u }
+            s.touchPerson(i)
         }
         return ["ok": true]
     }
@@ -346,7 +352,7 @@ final class LocalAPI: @unchecked Sendable {
                                     category: LocalLogic.category(inp.category, description: inp.description),
                                     originalCurrency: r.orig, originalAmount: r.origAmount, fxRate: r.rate, paidBy: inp.paidBy ?? me,
                                     splits: r.splits.sorted { $0.key < $1.key }.map { .init(person: $0.key, share: $0.value) },
-                                    createdAt: Date(), recurringId: recurringId))
+                                    createdAt: Date(), recurringId: recurringId, addedBy: me))
             guard recurringId == nil, !s.hideCoins else { return (id, 0) }       // automatic bills don't earn
             var got = 0
             let isFirst = !s.coins.contains { $0.reason == "FIRST_WIN" }
@@ -402,6 +408,7 @@ final class LocalAPI: @unchecked Sendable {
             s.expenses[i].paidBy = inp.paidBy ?? me
             s.expenses[i].splits = r.splits.sorted { $0.key < $1.key }.map { .init(person: $0.key, share: $0.value) }
             s.expenses[i].version += 1
+            s.touchExpense(i)
         }
         return try expenseJSON(eid)
     }
@@ -410,6 +417,7 @@ final class LocalAPI: @unchecked Sendable {
         try db.write { s in
             guard let i = s.expenses.firstIndex(where: { $0.id == eid && !$0.deleted }) else { throw LocalError(404, "Expense not found") }
             s.expenses[i].deleted = true
+            s.touchExpense(i)
             reverse(&s, source: "expense:\(eid)", text: "Deleted \(s.expenses[i].description)")
         }
         NotificationCenter.default.post(name: .coinsChanged, object: nil)
@@ -478,6 +486,7 @@ final class LocalAPI: @unchecked Sendable {
         try db.write { s in
             guard let i = s.payments.firstIndex(where: { $0.id == pid && !$0.deleted }) else { throw LocalError(404, "Not found") }
             s.payments[i].deleted = true
+            s.touchPayment(i)
             reverse(&s, source: "payment:\(pid)", text: "Deleted a payment")
         }
         return ["ok": true]
@@ -511,7 +520,8 @@ final class LocalAPI: @unchecked Sendable {
 
     private func weekCount(_ s: LocalDB.Store, _ gid: Int, _ start: Date) -> Int {
         let end = Calendar.current.date(byAdding: .day, value: 7, to: start)!
-        return s.liveExpenses(gid).filter { $0.recurringId == nil && $0.createdAt >= start && $0.createdAt < end }.count
+        let me = s.me?.id
+        return s.liveExpenses(gid).filter { $0.recurringId == nil && ($0.addedBy ?? me) == me && $0.createdAt >= start && $0.createdAt < end }.count
     }
 
     private func weeklyGoal(_ s: inout LocalDB.Store, _ gid: Int) -> Int? {
@@ -597,13 +607,17 @@ final class LocalAPI: @unchecked Sendable {
         try db.write { s in
             guard let i = s.expenses.firstIndex(where: { $0.id == eid && !$0.deleted }) else { throw LocalError(404, "Expense not found") }
             s.expenses[i].notes.append(.init(id: UUID().uuidString, body: String(text.prefix(500)), createdAt: Date()))
+            s.touchExpense(i)
         }
         return try notes(eid)
     }
 
     private func deleteNote(_ id: String) throws -> [String: Any] {
         try db.write { s in
-            for i in s.expenses.indices { s.expenses[i].notes.removeAll { $0.id == id } }
+            for i in s.expenses.indices where s.expenses[i].notes.contains(where: { $0.id == id }) {
+                s.expenses[i].notes.removeAll { $0.id == id }
+                s.touchExpense(i)
+            }
         }
         return ["ok": true]
     }

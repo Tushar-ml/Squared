@@ -10,6 +10,7 @@ struct GroupView: View {
     @State private var error: String?
     @State private var showAdd = false
     @State private var showInvite = false
+    @State private var showSync = false
     @State private var showIntro = false
     @State private var cardCollapsed = false
     @State private var settleTarget: Debt?
@@ -66,6 +67,7 @@ struct GroupView: View {
         .sheet(isPresented: $showAdd) {
             if let d = detail { ExpenseForm(group: d) { Task { await load() } } }
         }
+        .sheet(isPresented: $showSync, onDismiss: { Task { await load() } }) { SyncView(groupId: groupId, groupName: detail?.name) }
         .sheet(isPresented: $showInvite) {
             if let d = detail { InviteSheet(groupId: d.id, groupName: d.name, coinsEnabled: d.coinsEnabled) }
         }
@@ -96,6 +98,12 @@ struct GroupView: View {
     private func toolRow(_ d: GroupDetail) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                Button { showSync = true } label: {
+                    Label("Sync", systemImage: "antenna.radiowaves.left.and.right").font(Theme.body(14, .semibold))
+                        .padding(.horizontal, 12).frame(minHeight: 38)
+                        .background(Theme.surface).overlay(Rectangle().stroke(Theme.line))
+                }
+                .foregroundStyle(Theme.text)
                 tool("Insights", "chart.bar.xaxis", .insights(d.id))
                 tool("Recurring", "repeat", .recurring(d.id))
                 tool("Search", "magnifyingglass", .search(d.id))
@@ -331,7 +339,7 @@ struct RecapCard: View {
                 SectionLabel("Last week")
                 Text(last.status == "MET"
                      ? "Last week \(groupName) confirmed \(last.progress) expenses and hit the goal. This week's goal: \(target)."
-                     : "Last week was quiet. This week's goal: \(target). Anyone can confirm in one tap.")
+                     : "Last week was quiet. This week's goal: \(target). Log a bill to get started.")
                     .font(Theme.body(14))
             }
         }

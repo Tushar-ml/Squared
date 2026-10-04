@@ -7,6 +7,7 @@ struct HomeView: View {
     @State private var showAddFriend = false
     @State private var loading = true
     @State private var showCreate = false
+    @State private var showSync = false
 
     var body: some View {
         @Bindable var state = state
@@ -35,6 +36,7 @@ struct HomeView: View {
         .task { await load() }
         .onChange(of: state.refreshTick) { Task { await load() } }
         .sheet(isPresented: $showCreate) { CreateGroupSheet { id in Task { await load(); state.open(.group(id)) } } }
+        .sheet(isPresented: $showSync, onDismiss: { Task { await load() } }) { SyncView() }
         .sheet(isPresented: $showAddFriend) { AddFriendSheet { id in Task { await load(); state.open(.group(id)) } } }
     }
 
@@ -58,6 +60,10 @@ struct HomeView: View {
             HStack {
                 SectionLabel("Groups")
                 Spacer()
+                Button { showSync = true } label: {
+                    Label("Sync nearby", systemImage: "antenna.radiowaves.left.and.right").font(Theme.body(13, .semibold))
+                }
+                .foregroundStyle(Theme.muted)
             }
             if loading && groups.isEmpty {
                 ForEach(0..<2, id: \.self) { _ in Skeleton(height: 72) }

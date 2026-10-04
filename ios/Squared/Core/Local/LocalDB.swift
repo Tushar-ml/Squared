@@ -11,6 +11,10 @@ final class LocalDB: @unchecked Sendable {
         var upi: String?
         var isMe: Bool
         var createdAt: Date
+        // sync: the same uid on every phone; updatedAt + origin decide which edit wins
+        var uid: String?
+        var updatedAt: Date?
+        var origin: String?
     }
 
     struct Group: Codable {
@@ -24,7 +28,15 @@ final class LocalDB: @unchecked Sendable {
         var members: [Int]
         var createdAt: Date
         var archived = false
+        var uid: String?
+        var updatedAt: Date?
+        var origin: String?
+        var shared: Bool?                    // synced with someone at least once
+        var meUid: String?                   // which member uid is "you" in this group (yours, or the one you claimed)
+        var memberChanges: [String: MemberChange]?   // person uid -> latest add/remove, for merging membership
     }
+
+    struct MemberChange: Codable, Hashable { var present: Bool; var at: Date; var origin: String }
 
     /// What the expense form sends; also the template a recurring bill re-uses.
     struct ExpenseInput: Codable {
@@ -61,6 +73,10 @@ final class LocalDB: @unchecked Sendable {
         var recurringId: String?
         var notes: [Note] = []
         var deleted = false
+        var uid: String?
+        var updatedAt: Date?
+        var origin: String?
+        var addedBy: Int?                    // who logged it (you, unless it arrived by sync)
     }
 
     struct Payment: Codable {
@@ -72,6 +88,9 @@ final class LocalDB: @unchecked Sendable {
         var note: String?
         var createdAt: Date
         var deleted = false
+        var uid: String?
+        var updatedAt: Date?
+        var origin: String?
     }
 
     struct Attachment: Codable { var id: String; var expenseId: Int; var file: String; var contentType: String; var bytes: Int; var createdAt: Date }
@@ -119,6 +138,8 @@ final class LocalDB: @unchecked Sendable {
         var introSeen = false
         var locale = "en"
         var createdAt = Date()
+        var deviceId: String?                // this install, for sync tie-breaks
+        var meUids: [String]?                // person uids that mean "you" in groups shared from other phones
     }
 
     static var defaultFolder: URL {
@@ -152,6 +173,7 @@ final class LocalDB: @unchecked Sendable {
         } else {
             store = Store()
         }
+        if store.needsSyncIds { try? write { $0.fillSyncIds() } }
     }
 
     func read<T>(_ body: (Store) throws -> T) rethrows -> T {
@@ -164,6 +186,7 @@ final class LocalDB: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         var copy = store
         let out = try body(&copy)
+        if copy.needsSyncIds { copy.fillSyncIds() }     // new records get their global ids here
         let data = try Self.encoder.encode(copy)
         try data.write(to: file, options: [.atomic, .completeFileProtection])
         store = copy
@@ -187,6 +210,46 @@ final class LocalDB: @unchecked Sendable {
 }
 
 extension LocalDB.Store {
+    /// Older data (and anything created before sync existed) gets global ids.
+    var needsSyncIds: Bool {
+        deviceId == nil || people.contains { $0.uid == nil } || groups.contains { $0.uid == nil || $0.meUid == nil }
+            || expenses.contains { $0.uid == nil } || payments.contains { $0.uid == nil }
+    }
+
+    mutating func fillSyncIds() {
+        if deviceId == nil { deviceId = UUID().uuidString }
+        let dev = deviceId!
+        for i in people.indices where people[i].uid == nil {
+            people[i].uid = UUID().uuidString; people[i].updatedAt = people[i].createdAt; people[i].origin = dev
+        }
+        for i in groups.indices where groups[i].uid == nil {
+            groups[i].uid = UUID().uuidString; groups[i].updatedAt = groups[i].createdAt; groups[i].origin = dev
+        }
+        for i in groups.indices where groups[i].meUid == nil { groups[i].meUid = me?.uid }
+        for i in expenses.indices where expenses[i].uid == nil {
+            expenses[i].uid = UUID().uuidString; expenses[i].updatedAt = expenses[i].createdAt; expenses[i].origin = dev
+            if expenses[i].addedBy == nil { expenses[i].addedBy = me?.id }
+        }
+        for i in payments.indices where payments[i].uid == nil {
+            payments[i].uid = UUID().uuidString; payments[i].updatedAt = payments[i].createdAt; payments[i].origin = dev
+        }
+    }
+
+    /// Stamp a change so it wins over older copies on other phones.
+    mutating func touchGroup(_ i: Int) { groups[i].updatedAt = Date(); groups[i].origin = deviceId }
+    mutating func touchPerson(_ i: Int) { people[i].updatedAt = Date(); people[i].origin = deviceId }
+    mutating func touchExpense(_ i: Int) { expenses[i].updatedAt = Date(); expenses[i].origin = deviceId }
+    mutating func touchPayment(_ i: Int) { payments[i].updatedAt = Date(); payments[i].origin = deviceId }
+
+    mutating func setMember(_ gi: Int, _ pid: Int, present: Bool) {
+        guard let puid = person(pid)?.uid else { return }
+        var m = groups[gi].memberChanges ?? [:]
+        m[puid] = .init(present: present, at: Date(), origin: deviceId ?? "")
+        groups[gi].memberChanges = m
+        if present { if !groups[gi].members.contains(pid) { groups[gi].members.append(pid) } }
+        else { groups[gi].members.removeAll { $0 == pid } }
+    }
+
     mutating func newId() -> Int { defer { nextId += 1 }; return nextId }
     var me: LocalDB.Person? { people.first(where: \.isMe) }
     func person(_ id: Int) -> LocalDB.Person? { people.first { $0.id == id } }

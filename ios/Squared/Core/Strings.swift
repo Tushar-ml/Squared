@@ -43,7 +43,7 @@ enum Strings {
 
     static let intro = [
         (String(localized: "intro.1.title", defaultValue: "Add or confirm a shared expense"),
-         String(localized: "intro.1.body", defaultValue: "Log rent, a trip dinner or a cab. Others check it in one tap.")),
+         String(localized: "intro.1.body", defaultValue: "Log rent, a trip dinner or a cab. Everyone sees their share.")),
         (String(localized: "intro.2.title", defaultValue: "They confirm, you both earn"),
          String(localized: "intro.2.body", defaultValue: "Coins come from things you do together: confirming, settling, weekly goals.")),
         (String(localized: "intro.3.title", defaultValue: "Spend coins on vouchers, 4 coins = INR 1"),
